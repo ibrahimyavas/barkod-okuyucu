@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BarcodeDetectorImpl, DEFAULT_FORMATS } from "../lib/barcodeDetector.js";
+import { resolveBarcodeDetector, DEFAULT_FORMATS } from "../lib/barcodeDetector.js";
 
 const REPEAT_COOLDOWN_MS = 1500; // ignore re-reads of the *same* code while it's still sitting in frame
 const FALLBACK_INTERVAL_MS = 66; // ~15fps, used only when requestVideoFrameCallback is unavailable (e.g. Firefox)
@@ -30,10 +30,7 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect 
   const [torchOn, setTorchOn] = useState(false);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
-
-  if (!detectorRef.current) {
-    detectorRef.current = new BarcodeDetectorImpl({ formats });
-  }
+  const [usingNative, setUsingNative] = useState(null); // null = not resolved yet
 
   const drawOverlay = useCallback((barcode) => {
     const canvas = canvasRef.current;
@@ -138,20 +135,27 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect 
     setStarting(true);
     setError(null);
 
+    // 1D barcodes (EAN/UPC/Code128...) need noticeably more resolution than
+    // QR to decode reliably - each bar has to span enough pixels to survive
+    // the camera's own downscaling/compression. 1080p `ideal` asks for more
+    // without breaking devices that only offer 720p (`ideal` just gets the
+    // closest match).
     const constraints = {
       video: activeDeviceId
-        ? { deviceId: { exact: activeDeviceId } }
-        : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        ? { deviceId: { exact: activeDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        : { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: false,
     };
 
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then(async (stream) => {
+    Promise.all([resolveBarcodeDetector(formats), navigator.mediaDevices.getUserMedia(constraints)])
+      .then(async ([{ Impl, usingNative: isNative }, stream]) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
+        detectorRef.current = new Impl({ formats });
+        setUsingNative(isNative);
+
         streamRef.current = stream;
         const track = stream.getVideoTracks()[0];
         trackRef.current = track;
@@ -208,5 +212,6 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect 
     toggleTorch,
     error,
     starting,
+    usingNative,
   };
 }

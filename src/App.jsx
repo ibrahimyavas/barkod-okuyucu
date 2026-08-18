@@ -5,7 +5,6 @@ import { useCameraScanner } from "./hooks/useCameraScanner.js";
 import { useKeyboardWedge } from "./hooks/useKeyboardWedge.js";
 import { playBeep, vibrate } from "./lib/beep.js";
 import { scansToCSV, downloadTextFile } from "./lib/csv.js";
-import { usingNativeDetector } from "./lib/barcodeDetector.js";
 import CameraPanel from "./components/CameraPanel.jsx";
 import ScanTable from "./components/ScanTable.jsx";
 import ManualEntry from "./components/ManualEntry.jsx";
@@ -64,12 +63,14 @@ export default function App() {
         <span
           className="detector-badge"
           title={
-            usingNativeDetector
-              ? "Tarayıcının yerleşik dedektörü kullanılıyor (en hızlı)"
-              : "Bu tarayıcıda yerleşik dedektör yok, yazılımsal (WASM) dedektör kullanılıyor"
+            camera.usingNative == null
+              ? "Dedektör hazırlanıyor…"
+              : camera.usingNative
+                ? "Tarayıcının yerleşik dedektörü tüm formatları destekliyor, o kullanılıyor (en hızlı)"
+                : "Yerleşik dedektör tüm formatları desteklemiyor (veya yok) - güvenilir olan yazılımsal (WASM) dedektöre geçildi"
           }
         >
-          {usingNativeDetector ? "Yerleşik dedektör" : "WASM dedektör"}
+          {camera.usingNative == null ? "Dedektör hazırlanıyor…" : camera.usingNative ? "Yerleşik dedektör" : "WASM dedektör"}
         </span>
       </header>
 

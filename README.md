@@ -8,13 +8,20 @@ aktarılabilir.
 
 ## Nasıl çalışır
 
-- **Kamera:** Tarayıcının yerleşik `BarcodeDetector` API'si varsa (Chrome/
-  Edge, özellikle Android) onu kullanır — donanım hızlandırmalı, en hızlı
-  seçenek. Yoksa (Safari, Firefox) `barcode-detector` paketinin WASM
-  (ZXing) tabanlı yazılımsal sürümüne otomatik döner. Hangisinin
-  kullanıldığı sağ üstteki rozette görünür. Algılama her video karesinde
-  `requestVideoFrameCallback` ile çalışır (en düşük gecikme); bu API yoksa
-  ~15fps'lik zamanlayıcıya döner.
+- **Kamera:** Tarayıcının yerleşik `BarcodeDetector` API'si varsa *ve
+  gerçekten istediğimiz tüm formatları destekliyorsa* onu kullanır — donanım
+  hızlandırmalı, en hızlı seçenek. Bunu körü körüne varsaymıyoruz: bazı
+  platformlarda (özellikle masaüstü Linux Chrome) yerleşik dedektör sessizce
+  sadece QR destekler, `detect()` diğer formatlar için hep boş döner. Bu
+  yüzden `BarcodeDetector.getSupportedFormats()` ile gerçek desteği kontrol
+  ediyoruz; eksikse `barcode-detector` paketinin WASM (ZXing) tabanlı
+  yazılımsal sürümüne otomatik geçiyoruz - bu motor kendi içinde tüm
+  formatları decode ettiği için bu sorunu hiç yaşamıyor. WASM dosyası
+  jsDelivr CDN yerine build'e gömülü olarak (`dist/assets/zxing_reader-*.wasm`)
+  yerelden sunuluyor - ekstra ağ bağımlılığı ve CDN gecikmesi yok. Hangi
+  motorun kullanıldığı sağ üstteki rozette görünür. Algılama her video
+  karesinde `requestVideoFrameCallback` ile çalışır (en düşük gecikme); bu
+  API yoksa ~15fps'lik zamanlayıcıya döner.
 - **El terminali:** Çoğu el tipi barkod okuyucu USB/Bluetooth üzerinden
   klavye gibi görünür (HID) — kodu yazıp Enter basar. Uygulama, tuş
   vuruşları arasındaki süreye bakarak bunu insan yazımından ayırt eder
@@ -77,3 +84,11 @@ Cloudflare Worker + KV/D1 backend'i sonraki bir adımda eklenebilir.
 Taranan formatlar `src/lib/barcodeDetector.js` içindeki `DEFAULT_FORMATS`
 listesinde. Liste kısa tutuldukça algılama daha hızlı çalışır; kullanmadığınız
 formatları listeden çıkarmanız, yenilerini eklemekten daha çok hız kazandırır.
+
+## `barcode-detector`'ı güncellerken
+
+`package.json`'daki `zxing-wasm` sürümü, `barcode-detector`'ın kendi
+`node_modules/barcode-detector/package.json` içinde beyan ettiği `zxing-wasm`
+sürümüyle **aynı** kalmalı (WASM dosyasını doğrudan o pakete işaret ederek
+yerelden sunuyoruz - bkz. `src/lib/barcodeDetector.js`). `barcode-detector`'ı
+güncellediğinizde bu ikisinin senkron kalıp kalmadığını kontrol edin.
