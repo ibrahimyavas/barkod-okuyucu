@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5174",
+    "worker:dev": "wrangler dev --port 8787",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5174",
-    "cf:dev": "vite build && wrangler dev",
-    "deploy": "vite build && wrangler deploy"
+    "cf:dev": "vite build && wrangler dev --port 8787",
+    "deploy": "vite build && wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply barkod-okuyucu-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply barkod-okuyucu-db --remote"
   },
   "dependencies": {
     "barcode-detector": "^3.2.2",

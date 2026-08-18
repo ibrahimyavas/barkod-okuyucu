@@ -2,12 +2,26 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "barkod-okuyucu",
   "compatibility_date": "2026-08-18",
-  // Pure static SPA build - no Worker script needed, Cloudflare serves
-  // dist/ directly from the edge. "single-page-application" fallback means
-  // unknown paths resolve to index.html instead of 404ing, since this is a
-  // client-side-routed app.
+  "main": "worker/index.js",
+  // The SPA build is served as static assets; the Worker only steps in for
+  // /api/* (see worker/index.js) and otherwise hands the request straight to
+  // env.ASSETS. "single-page-application" fallback means unknown non-API
+  // paths resolve to index.html instead of 404ing.
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "barkod-okuyucu-db",
+      // Placeholder - replace with the real ID printed by
+      // `npx wrangler d1 create barkod-okuyucu-db` before deploying. Local
+      // dev/migrations work fine with the placeholder since --local never
+      // talks to the real Cloudflare API.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
 }

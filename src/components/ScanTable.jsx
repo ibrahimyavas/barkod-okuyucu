@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { Trash2, Camera, Keyboard, Pencil, Search } from "lucide-react";
+import { Trash2, Camera, Keyboard, Pencil, Search, PackagePlus } from "lucide-react";
 import { sourceLabel } from "../lib/csv.js";
 
 const SOURCE_ICON = { camera: Camera, gadget: Keyboard, manual: Pencil };
 
-export default function ScanTable({ scans, onRemove }) {
+export default function ScanTable({ scans, onRemove, onSendToEntry }) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -54,7 +54,15 @@ export default function ScanTable({ scans, onRemove }) {
                     </td>
                     <td className="count-cell">{s.count}</td>
                     <td className="muted">{new Date(s.lastSeenAt).toLocaleTimeString("tr-TR")}</td>
-                    <td>
+                    <td className="row-actions">
+                      <button
+                        className="icon-btn"
+                        onClick={() => onSendToEntry(s.code)}
+                        aria-label="Ürün girişine aktar"
+                        title="Ürün girişine aktar"
+                      >
+                        <PackagePlus size={15} />
+                      </button>
                       <button className="icon-btn danger" onClick={() => onRemove(s.id)} aria-label="Sil" title="Sil">
                         <Trash2 size={15} />
                       </button>

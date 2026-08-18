@@ -1,10 +1,17 @@
 # Barkod Okuyucu
 
-Kamera ve el terminali (USB/Bluetooth barkod tabancası) ile hızlı barkod
-okuma uygulaması. Okunan her kod ekrandaki listeye eklenir; aynı kod tekrar
-okutulursa yeni satır açmaz, o satırın **adet**ini artırır (sayım için
-uygundur). Liste bu cihazda saklanır (localStorage) ve CSV olarak dışa
-aktarılabilir.
+İki sekmeli bir uygulama:
+
+- **Tarayıcı:** Kamera ve el terminali (USB/Bluetooth barkod tabancası) ile
+  hızlı barkod okuma. Okunan her kod ekrandaki listeye eklenir; aynı kod
+  tekrar okutulursa yeni satır açmaz, o satırın **adet**ini artırır (sayım
+  için uygundur). Liste bu cihazda saklanır (localStorage) ve CSV olarak dışa
+  aktarılabilir.
+- **Ürün Girişi:** Ürün adı, kategori, depo/raf konumu, alınış tarihi ve
+  maliyet ile ürün kataloğu girişi. Tarayıcı sekmesindeki bir satırdan
+  📦 ikonuna basarak o kodu doğrudan bu forma "aktarabilirsiniz". Bu liste
+  localStorage'da değil, Cloudflare D1'de tutulur - yani cihazlar arasında
+  paylaşılır (bkz. aşağıdaki D1 kurulumu).
 
 ## Nasıl çalışır
 
@@ -36,10 +43,45 @@ aktarılabilir.
 
 ```bash
 npm install
-npm run dev
+```
+
+### İlk kurulumda: D1 veritabanı
+
+"Ürün Girişi" sekmesi bir Cloudflare D1 veritabanı gerektirir. Bir kere:
+
+```bash
+npx wrangler login                          # Cloudflare hesabınızla yetkilendirin
+npx wrangler d1 create barkod-okuyucu-db    # gerçek bir database_id döndürür
+```
+
+Dönen `database_id`'yi `wrangler.jsonc` içindeki `d1_databases[0].database_id`
+alanına yapıştırın (şu an placeholder bir UUID duruyor). Sonra şemayı
+uygulayın:
+
+```bash
+npm run db:migrate:local    # yerel geliştirme veritabanı (sqlite, .wrangler/state altında)
+npm run db:migrate:remote   # gerçek/uzak D1 - deploy'dan önce bir kere şart
+```
+
+`db:migrate:local`, `database_id` hâlâ placeholder olsa bile çalışır -
+`--local` hiçbir zaman gerçek Cloudflare API'sine dokunmaz. `--remote` için
+ise gerçek ID ve `wrangler login` şart.
+
+### Geliştirme
+
+İki süreç birlikte çalışır - biri React arayüzünü Vite ile (HMR'lı) sunar,
+diğeri `/api/*` uçlarını gerçek Worker + D1 ile:
+
+```bash
+npm run worker:dev   # 1. terminal - Worker + D1, :8787
+npm run dev           # 2. terminal - Vite dev server, :5174 (/api isteklerini :8787'ye proxy'ler)
 ```
 
 Tarayıcıda `http://localhost:5174` adresini açın.
+
+Sadece tarayıcı sekmesiyle uğraşıyorsanız (kamera/el terminali), `worker:dev`
+olmadan da `npm run dev` tek başına çalışır - Ürün Girişi sekmesi o durumda
+"sunucuya ulaşılamadı" hatası verir, bu normaldir.
 
 ### Telefonla / kamerayla test
 
@@ -57,27 +99,27 @@ verilen `https://...` adresini telefonda açın.
 
 ## Yayına alma — Cloudflare Workers
 
-Bu bir statik React/Vite uygulaması; sunucu tarafı mantık yok, bu yüzden
-Worker script'i değil, `wrangler.jsonc` içindeki `assets` yapılandırmasıyla
-doğrudan `dist/`'i statik olarak Cloudflare'in edge ağından sunuyoruz (ayrı
-bir Cloudflare Pages projesine gerek yok).
+`worker/index.js`, statik SPA'yı (`dist/`) ve `/api/*` uçlarını (D1 üzerinden
+ürün girişi) aynı Worker'dan sunar - ayrı bir Cloudflare Pages projesine
+gerek yok. Deploy'dan önce D1'in **uzak** (remote) tarafının şemasının güncel
+olduğundan emin olun:
 
 ```bash
-npx wrangler login   # tarayıcıda Cloudflare hesabınızla bir kere yetkilendirin
-npm run deploy       # vite build + wrangler deploy
+npm run db:migrate:remote   # remote D1 şemasını günceller (yeni migration eklediyseniz)
+npm run deploy                # vite build + wrangler deploy
 ```
 
-Yerelde workerd üzerinde (gerçek Cloudflare ortamına en yakın haliyle) test
-etmek için:
+Uçtan uca (Worker + D1 + build edilmiş statik dosyalar, tek komutla, gerçek
+Cloudflare ortamına en yakın haliyle) yerelde test etmek için:
 
 ```bash
 npm run cf:dev
 ```
 
-Şu an bir backend/veritabanı **yok** — liste her cihazda kendi
-localStorage'ında tutulur ve cihazlar arasında senkronize olmaz. Cihazlar
-arası paylaşım gerekirse (ör. birden çok kişi aynı listeye okutacaksa), bir
-Cloudflare Worker + KV/D1 backend'i sonraki bir adımda eklenebilir.
+Tarayıcı sekmesindeki liste (localStorage) hâlâ cihaza özeldir ve
+senkronize olmaz - bu bilinçli bir tercih (bkz. yukarıdaki "Nasıl çalışır").
+Ürün Girişi listesi ise D1'de olduğu için tüm cihazlar/kullanıcılar aynı
+veriyi görür.
 
 ## Barkod formatlarını değiştirmek
 
