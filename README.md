@@ -1,6 +1,7 @@
 # Barkod Okuyucu
 
-İki sekmeli bir uygulama:
+Tek şifreyle korunan, sekmeli bir küçük işletme uygulaması. Şu an içindeki
+sekmeler:
 
 - **Tarayıcı:** Kamera ve el terminali (USB/Bluetooth barkod tabancası) ile
   hızlı barkod okuma. Okunan her kod ekrandaki listeye eklenir; aynı kod
@@ -47,7 +48,8 @@ npm install
 
 ### İlk kurulumda: D1 veritabanı
 
-"Ürün Girişi" sekmesi bir Cloudflare D1 veritabanı gerektirir. Bir kere:
+"Ürün Girişi" ve sonraki dashboard'lar bir Cloudflare D1 veritabanı
+gerektirir. Bir kere:
 
 ```bash
 npx wrangler login                          # Cloudflare hesabınızla yetkilendirin
@@ -66,6 +68,35 @@ npm run db:migrate:remote   # gerçek/uzak D1 - deploy'dan önce bir kere şart
 `db:migrate:local`, `database_id` hâlâ placeholder olsa bile çalışır -
 `--local` hiçbir zaman gerçek Cloudflare API'sine dokunmaz. `--remote` için
 ise gerçek ID ve `wrangler login` şart.
+
+### İlk kurulumda: giriş şifresi
+
+Tüm uygulama (Tarayıcı sekmesi dahil) tek bir paylaşılan şifreyle korunur.
+Oturumlar imzalı bir çerezle tutulur (D1'de tablo yok - `worker/auth.js`).
+
+**Yerel geliştirme:**
+
+```bash
+cp .dev.vars.example .dev.vars
+# .dev.vars içindeki AUTH_PASSWORD ve SESSION_SECRET'i düzenleyin
+```
+
+`.dev.vars` gitignore'da - asla commit'lenmez. `AUTH_PASSWORD` tanımlı
+değilse giriş her zaman "Sunucuda AUTH_PASSWORD tanımlı değil" hatası verir
+(şifresiz sızma yerine güvenli varsayılan).
+
+**Prod (deploy'dan önce bir kere):**
+
+```bash
+npx wrangler secret put AUTH_PASSWORD
+npx wrangler secret put SESSION_SECRET   # örn. `openssl rand -base64 32` çıktısı
+```
+
+Şifreyi değiştirmek isterseniz `wrangler secret put AUTH_PASSWORD`'ı tekrar
+çalıştırmanız yeterli - mevcut oturumlar `SESSION_SECRET` değişmediği sürece
+geçerli kalmaya devam eder (yani sadece şifreyi değiştirmek var olan
+girişleri düşürmez; herkesi anında çıkışa zorlamak isterseniz
+`SESSION_SECRET`'i de değiştirin).
 
 ### Geliştirme
 

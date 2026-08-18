@@ -37,3 +37,20 @@ export function createProduct(product) {
 export function deleteProduct(id) {
   return request(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
+
+export function login(password) {
+  return request("/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+}
+
+export function logout() {
+  return request("/api/auth/logout", { method: "POST" });
+}
+
+export async function fetchAuthStatus() {
+  const data = await request("/api/auth/me");
+  return data.authenticated;
+}
