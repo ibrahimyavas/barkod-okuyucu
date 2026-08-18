@@ -8,11 +8,13 @@ sekmeler:
   tekrar okutulursa yeni satır açmaz, o satırın **adet**ini artırır (sayım
   için uygundur). Liste bu cihazda saklanır (localStorage) ve CSV olarak dışa
   aktarılabilir.
-- **Ürün Girişi:** Ürün adı, kategori, depo/raf konumu, alınış tarihi ve
-  maliyet ile ürün kataloğu girişi. Tarayıcı sekmesindeki bir satırdan
-  📦 ikonuna basarak o kodu doğrudan bu forma "aktarabilirsiniz". Bu liste
-  localStorage'da değil, Cloudflare D1'de tutulur - yani cihazlar arasında
-  paylaşılır (bkz. aşağıdaki D1 kurulumu).
+- **Ürün Girişi:** Ürün adı, kategori, depo/raf konumu, alınış tarihi,
+  maliyet ile ürün kataloğu girişi - artık birim, mevcut stok ve min. stok
+  seviyesi de dahil. Tarayıcı sekmesindeki bir satırdan 📦 ikonuna basarak o
+  kodu doğrudan bu forma "aktarabilirsiniz". Tablodaki Stok/Min. sütunları
+  tek tıkla düzenlenebilir (StockAdjuster - sayıyı yazıp ✓'a basmanız
+  yeterli). Bu liste localStorage'da değil, Cloudflare D1'de tutulur - yani
+  cihazlar arasında paylaşılır (bkz. aşağıdaki D1 kurulumu).
 - **Satın Alma:** Tedarikçi dizini (ad, yetkili, telefon, adres) + satın alma
   kayıtları (ürün, miktar/birim, birim fiyat, toplam tutar - miktar ve birim
   fiyat girilince otomatik hesaplanır, elle de değiştirilebilir). Ödeme
@@ -26,6 +28,11 @@ sekmeler:
   tıklayınca hareket geçmişi ve yeni Borç/Alacak ekleme formu açılır.
   Satın Alma'daki tedarikçi listesinden **bilinçli olarak ayrı** - bu modül
   kendi başına, bağımsız bir dashboard.
+- **Düşük Stok:** Ürün Girişi'nde hem mevcut stok hem min. stok seviyesi
+  tanımlanmış ürünlerden, stoğu eşiğin altına/eşitine düşenleri listeler
+  (ikisinden biri boşsa - "stok takibi yapmıyorum" demektir - o ürün hiç
+  görünmez). En kritik ürün en üstte; buradan da stoğu doğrudan
+  güncelleyebilirsiniz.
 
 ## Nasıl çalışır
 

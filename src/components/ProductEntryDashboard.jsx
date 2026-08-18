@@ -2,11 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Boxes, Wallet, Plus, Trash2, RefreshCw, Search, ScanBarcode } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
+import { stockStatus } from "../lib/stock.js";
+import StockAdjuster from "./StockAdjuster.jsx";
 
-const EMPTY_FORM = { barkod: "", urunAdi: "", kategori: "", depoKonumu: "", alinisTarihi: todayISO(), maliyet: "" };
+const EMPTY_FORM = {
+  barkod: "",
+  urunAdi: "",
+  kategori: "",
+  depoKonumu: "",
+  alinisTarihi: todayISO(),
+  maliyet: "",
+  birim: "",
+  miktar: "",
+  minStok: "",
+};
 
 export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill }) {
-  const { products, loading, error, addProduct, removeProduct } = useProducts();
+  const { products, loading, error, addProduct, removeProduct, updateProduct } = useProducts();
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -59,6 +71,9 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
         depoKonumu: form.depoKonumu.trim(),
         alinisTarihi: form.alinisTarihi,
         maliyet: form.maliyet === "" ? null : Number(form.maliyet),
+        birim: form.birim.trim(),
+        miktar: form.miktar === "" ? null : Number(form.miktar),
+        minStok: form.minStok === "" ? null : Number(form.minStok),
       });
       setForm({ ...EMPTY_FORM, alinisTarihi: form.alinisTarihi });
     } catch (err) {
@@ -162,6 +177,42 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
           />
         </div>
 
+        <div className="field">
+          <label htmlFor="pf-birim">Birim</label>
+          <input
+            id="pf-birim"
+            type="text"
+            placeholder="adet / kg / teneke..."
+            value={form.birim}
+            onChange={(e) => updateField("birim", e.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="pf-miktar">Mevcut Stok</label>
+          <input
+            id="pf-miktar"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            value={form.miktar}
+            onChange={(e) => updateField("miktar", e.target.value)}
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="pf-minstok">Min. Stok Seviyesi</label>
+          <input
+            id="pf-minstok"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            value={form.minStok}
+            onChange={(e) => updateField("minStok", e.target.value)}
+            placeholder="boş = takip etme"
+          />
+        </div>
+
         {submitError && <p className="form-error">{submitError}</p>}
 
         <button type="submit" className="submit-btn" disabled={submitting}>
@@ -202,30 +253,44 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
                   <th>Konum</th>
                   <th>Alınış Tarihi</th>
                   <th>Maliyet</th>
+                  <th>Stok</th>
+                  <th>Min.</th>
+                  <th>Durum</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.urunAdi}</td>
-                    <td className="code-cell">{p.barkod || "-"}</td>
-                    <td className="muted">{p.kategori || "-"}</td>
-                    <td className="muted">{p.depoKonumu || "-"}</td>
-                    <td className="muted">{trDate(p.alinisTarihi)}</td>
-                    <td>{fmtCurrency(p.maliyet)}</td>
-                    <td>
-                      <button
-                        className="icon-btn danger"
-                        onClick={() => removeProduct(p.id)}
-                        aria-label="Sil"
-                        title="Sil"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((p) => {
+                  const status = stockStatus(p.miktar, p.minStok);
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.urunAdi}</td>
+                      <td className="code-cell">{p.barkod || "-"}</td>
+                      <td className="muted">{p.kategori || "-"}</td>
+                      <td className="muted">{p.depoKonumu || "-"}</td>
+                      <td className="muted">{trDate(p.alinisTarihi)}</td>
+                      <td>{fmtCurrency(p.maliyet)}</td>
+                      <td>
+                        <StockAdjuster value={p.miktar} onSave={(v) => updateProduct(p.id, { miktar: v })} />
+                        {p.birim && <span className="muted unit-suffix">{p.birim}</span>}
+                      </td>
+                      <td>
+                        <StockAdjuster value={p.minStok} onSave={(v) => updateProduct(p.id, { minStok: v })} />
+                      </td>
+                      <td className={status.cls}>{status.label}</td>
+                      <td>
+                        <button
+                          className="icon-btn danger"
+                          onClick={() => removeProduct(p.id)}
+                          aria-label="Sil"
+                          title="Sil"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

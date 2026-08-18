@@ -372,6 +372,29 @@ body {
   background: var(--panel-2);
 }
 
+/* ---- inline stock adjuster ---------------------------------------------- */
+
+.stock-adjuster {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stock-adjuster input {
+  width: 70px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+}
+
+.unit-suffix {
+  margin-left: 4px;
+  font-size: 0.75rem;
+}
+
 /* ---- camera ------------------------------------------------------- */
 
 .camera-panel {

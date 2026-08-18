@@ -38,6 +38,10 @@ export function deleteProduct(id) {
   return request(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export function updateProduct(id, fields) {
+  return request(`/api/products/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
 export async function fetchSuppliers() {
   const data = await request("/api/suppliers");
   return data.suppliers;
