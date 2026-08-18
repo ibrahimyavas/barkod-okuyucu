@@ -13,6 +13,11 @@ sekmeler:
   📦 ikonuna basarak o kodu doğrudan bu forma "aktarabilirsiniz". Bu liste
   localStorage'da değil, Cloudflare D1'de tutulur - yani cihazlar arasında
   paylaşılır (bkz. aşağıdaki D1 kurulumu).
+- **Satın Alma:** Tedarikçi dizini (ad, yetkili, telefon, adres) + satın alma
+  kayıtları (ürün, miktar/birim, birim fiyat, toplam tutar - miktar ve birim
+  fiyat girilince otomatik hesaplanır, elle de değiştirilebilir). Ödeme
+  durumu rozetine tıklayınca Beklemede → Kısmi → Ödendi sırayla döner. Üstte
+  toplam satın alma ve bekleyen ödeme tutarı özetlenir.
 
 ## Nasıl çalışır
 

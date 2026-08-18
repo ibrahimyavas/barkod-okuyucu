@@ -21,29 +21,55 @@ async function request(path, options) {
   return res.status === 204 ? null : res.json();
 }
 
+function withJsonBody(method, body) {
+  return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
+}
+
 export async function fetchProducts() {
   const data = await request("/api/products");
   return data.products;
 }
 
 export function createProduct(product) {
-  return request("/api/products", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(product),
-  });
+  return request("/api/products", withJsonBody("POST", product));
 }
 
 export function deleteProduct(id) {
   return request(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchSuppliers() {
+  const data = await request("/api/suppliers");
+  return data.suppliers;
+}
+
+export function createSupplier(supplier) {
+  return request("/api/suppliers", withJsonBody("POST", supplier));
+}
+
+export function deleteSupplier(id) {
+  return request(`/api/suppliers/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function fetchPurchases() {
+  const data = await request("/api/purchases");
+  return data.purchases;
+}
+
+export function createPurchase(purchase) {
+  return request("/api/purchases", withJsonBody("POST", purchase));
+}
+
+export function updatePurchaseStatus(id, odemeDurumu) {
+  return request(`/api/purchases/${encodeURIComponent(id)}`, withJsonBody("PATCH", { odemeDurumu }));
+}
+
+export function deletePurchase(id) {
+  return request(`/api/purchases/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function login(password) {
-  return request("/api/auth/login", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ password }),
-  });
+  return request("/api/auth/login", withJsonBody("POST", { password }));
 }
 
 export function logout() {

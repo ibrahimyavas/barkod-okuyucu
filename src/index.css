@@ -204,13 +204,18 @@ body {
   color: var(--text-muted);
 }
 
-.field input {
+.field input,
+.field select {
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.9rem;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
 }
 
 .form-error {
@@ -255,6 +260,94 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ---- collapsible panel (suppliers, ...) -------------------------------- */
+
+.collapsible {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.collapsible-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel);
+  border: none;
+  color: var(--text);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.collapsible-header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chevron-open {
+  transform: rotate(180deg);
+}
+
+.collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.supplier-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.supplier-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+/* ---- payment status badge ---------------------------------------------- */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+}
+
+.status-badge.status-beklemede {
+  color: #fde68a;
+  border-color: #eab308;
+}
+
+.status-badge.status-kismi {
+  color: #93c5fd;
+  border-color: #3b82f6;
+}
+
+.status-badge.status-odendi {
+  color: #bbf7d0;
+  border-color: var(--accent);
 }
 
 /* ---- camera ------------------------------------------------------- */

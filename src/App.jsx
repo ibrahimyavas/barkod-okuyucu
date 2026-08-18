@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScanLine, PackagePlus, LogOut } from "lucide-react";
+import { ScanLine, PackagePlus, ShoppingCart, LogOut } from "lucide-react";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
+import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
+
+// Each new dashboard just needs an entry here - App.jsx doesn't otherwise
+// need to change as the module list grows.
+const TABS = [
+  { id: "scanner", label: "Tarayıcı", icon: ScanLine },
+  { id: "products", label: "Ürün Girişi", icon: PackagePlus },
+  { id: "purchasing", label: "Satın Alma", icon: ShoppingCart },
+];
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -51,21 +60,19 @@ export default function App() {
       </header>
 
       <nav className="tab-nav">
-        <button className={`tab-btn ${view === "scanner" ? "active" : ""}`} onClick={() => setView("scanner")}>
-          <ScanLine size={16} />
-          Tarayıcı
-        </button>
-        <button className={`tab-btn ${view === "products" ? "active" : ""}`} onClick={() => setView("products")}>
-          <PackagePlus size={16} />
-          Ürün Girişi
-        </button>
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button key={id} className={`tab-btn ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
       </nav>
 
-      {view === "scanner" ? (
-        <ScannerView onSendToEntry={handleSendToEntry} />
-      ) : (
+      {view === "scanner" && <ScannerView onSendToEntry={handleSendToEntry} />}
+      {view === "products" && (
         <ProductEntryDashboard prefillBarcode={prefillBarcode} onConsumePrefill={() => setPrefillBarcode(null)} />
       )}
+      {view === "purchasing" && <PurchasingDashboard />}
     </div>
   );
 }
