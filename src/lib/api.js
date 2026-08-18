@@ -68,6 +68,32 @@ export function deletePurchase(id) {
   return request(`/api/purchases/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchCariAccounts() {
+  const data = await request("/api/cari-hesaplar");
+  return data.accounts;
+}
+
+export function createCariAccount(account) {
+  return request("/api/cari-hesaplar", withJsonBody("POST", account));
+}
+
+export function deleteCariAccount(id) {
+  return request(`/api/cari-hesaplar/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function fetchCariMovements(cariId) {
+  const data = await request(`/api/cari-hesaplar/${encodeURIComponent(cariId)}/hareketler`);
+  return data.movements;
+}
+
+export function createCariMovement(cariId, movement) {
+  return request(`/api/cari-hesaplar/${encodeURIComponent(cariId)}/hareketler`, withJsonBody("POST", movement));
+}
+
+export function deleteCariMovement(id) {
+  return request(`/api/cari-hareketler/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function login(password) {
   return request("/api/auth/login", withJsonBody("POST", { password }));
 }

@@ -18,6 +18,14 @@ sekmeler:
   fiyat girilince otomatik hesaplanır, elle de değiştirilebilir). Ödeme
   durumu rozetine tıklayınca Beklemede → Kısmi → Ödendi sırayla döner. Üstte
   toplam satın alma ve bekleyen ödeme tutarı özetlenir.
+- **Cari Hesap:** Müşteri/tedarikçi/diğer taraflar için bakiye takibi.
+  Standart cari hesap ekstresi mantığı: her hesabın bakiyesi
+  Σ(Borç) − Σ(Alacak) olarak hareketlerden hesaplanır (ayrı bir bakiye
+  kolonu tutulmaz, tutarsızlık riski yok) - pozitif bakiye "cari size
+  borçlu", negatif bakiye "siz cariye borçlusunuz" demektir. Bir hesaba
+  tıklayınca hareket geçmişi ve yeni Borç/Alacak ekleme formu açılır.
+  Satın Alma'daki tedarikçi listesinden **bilinçli olarak ayrı** - bu modül
+  kendi başına, bağımsız bir dashboard.
 
 ## Nasıl çalışır
 

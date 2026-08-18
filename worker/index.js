@@ -6,6 +6,7 @@ import { json } from "./utils.js";
 import { handleAuthRoute, requireAuth } from "./auth.js";
 import { handleProductsRoute } from "./products.js";
 import { handlePurchasesRoute } from "./purchases.js";
+import { handleCariRoute } from "./cari.js";
 
 async function handleApi(request, env, url) {
   // Auth routes (/api/auth/login, /logout, /me) are public by definition.
@@ -21,6 +22,9 @@ async function handleApi(request, env, url) {
 
   const purchasesResponse = await handlePurchasesRoute(request, env, url.pathname);
   if (purchasesResponse) return purchasesResponse;
+
+  const cariResponse = await handleCariRoute(request, env, url.pathname);
+  if (cariResponse) return cariResponse;
 
   return json({ error: "Bulunamadı." }, { status: 404 });
 }

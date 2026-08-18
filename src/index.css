@@ -350,6 +350,28 @@ body {
   border-color: var(--accent);
 }
 
+/* ---- cari hesap balances ------------------------------------------------ */
+
+.balance-positive {
+  color: var(--accent);
+}
+
+.balance-negative {
+  color: var(--danger);
+}
+
+.balance-zero {
+  color: var(--text-muted);
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: var(--panel-2);
+}
+
 /* ---- camera ------------------------------------------------------- */
 
 .camera-panel {

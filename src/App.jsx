@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScanLine, PackagePlus, ShoppingCart, LogOut } from "lucide-react";
+import { ScanLine, PackagePlus, ShoppingCart, Landmark, LogOut } from "lucide-react";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
+import CariHesapDashboard from "./components/CariHesapDashboard.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
 
@@ -12,6 +13,7 @@ const TABS = [
   { id: "scanner", label: "Tarayıcı", icon: ScanLine },
   { id: "products", label: "Ürün Girişi", icon: PackagePlus },
   { id: "purchasing", label: "Satın Alma", icon: ShoppingCart },
+  { id: "cari", label: "Cari Hesap", icon: Landmark },
 ];
 
 export default function App() {
@@ -73,6 +75,7 @@ export default function App() {
         <ProductEntryDashboard prefillBarcode={prefillBarcode} onConsumePrefill={() => setPrefillBarcode(null)} />
       )}
       {view === "purchasing" && <PurchasingDashboard />}
+      {view === "cari" && <CariHesapDashboard />}
     </div>
   );
 }
