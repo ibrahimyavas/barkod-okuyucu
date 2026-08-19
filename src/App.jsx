@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LogOut } from "lucide-react";
+import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, LogOut } from "lucide-react";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
 import CariHesapDashboard from "./components/CariHesapDashboard.jsx";
 import LowStockDashboard from "./components/LowStockDashboard.jsx";
 import LabelPrintDashboard from "./components/LabelPrintDashboard.jsx";
+import ReportDashboard from "./components/ReportDashboard.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
 
@@ -18,6 +19,7 @@ const TABS = [
   { id: "cari", label: "Cari Hesap", icon: Landmark },
   { id: "lowstock", label: "Düşük Stok", icon: AlertTriangle },
   { id: "labels", label: "Etiket Bas", icon: Tag },
+  { id: "report", label: "Rapor", icon: LayoutDashboard },
 ];
 
 export default function App() {
@@ -82,6 +84,7 @@ export default function App() {
       {view === "cari" && <CariHesapDashboard />}
       {view === "lowstock" && <LowStockDashboard />}
       {view === "labels" && <LabelPrintDashboard />}
+      {view === "report" && <ReportDashboard />}
     </div>
   );
 }

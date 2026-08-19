@@ -749,3 +749,208 @@ body {
     margin: 8mm;
   }
 }
+
+/* ---- report charts ------------------------------------------------------- */
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.chart-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chart-card-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Ranked (horizontal) bars - category counts, payment status totals. */
+.ranked-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ranked-bar-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.ranked-bar-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranked-bar-track {
+  height: 20px;
+  background: var(--panel-2);
+  border-radius: 4px;
+}
+
+.ranked-bar-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  transition: filter 0.1s;
+}
+
+.ranked-bar-row:hover .ranked-bar-fill,
+.ranked-bar-row:focus-visible .ranked-bar-fill {
+  filter: brightness(1.2);
+}
+
+.ranked-bar-value {
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Vertical columns - monthly spend. */
+.column-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 150px;
+}
+
+.column-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 4px;
+}
+
+.column-bar-value {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.column-bar-track {
+  width: 100%;
+  max-width: 32px;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.column-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  background: #3987e5; /* SEQUENTIAL, see lib/reportColors.js */
+  border-radius: 4px 4px 0 0;
+  transition: filter 0.1s;
+}
+
+.column-bar-wrap:hover .column-bar-fill,
+.column-bar-wrap:focus-visible .column-bar-fill {
+  filter: brightness(1.2);
+}
+
+.column-bar-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Diverging (horizontal) bars - cari bakiye above/below zero. */
+.diverging-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diverging-bar-row {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.diverging-bar-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diverging-bar-track {
+  position: relative;
+  height: 20px;
+  background: var(--panel-2);
+  border-radius: 4px;
+}
+
+.diverging-bar-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+.diverging-bar-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 2px;
+  transition: filter 0.1s;
+}
+
+.diverging-bar-fill.positive {
+  left: calc(50% + 1px);
+  border-radius: 0 4px 4px 0;
+  background: #3987e5;
+}
+
+.diverging-bar-fill.negative {
+  right: calc(50% + 1px);
+  border-radius: 4px 0 0 4px;
+  background: #e66767;
+}
+
+.diverging-bar-row:hover .diverging-bar-fill,
+.diverging-bar-row:focus-visible .diverging-bar-fill {
+  filter: brightness(1.2);
+}

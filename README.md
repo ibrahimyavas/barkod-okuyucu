@@ -42,6 +42,13 @@ sekmeler:
   şekilde özel bir `@media print` düzeniyle hazırlanıyor. Kuyruk
   localStorage'da tutulur (yazdırma fiziksel/tek cihaza özel bir eylem
   olduğu için D1'e taşınmadı).
+- **Rapor:** Ürün Girişi + Satın Alma + Cari Hesap verilerinden özet KPI'lar
+  (stok değeri, kritik stok, bu ay satın alma, toplam alacak/borç) ve dört
+  grafik: kategoriye göre ürün sayısı, aylık satın alma harcaması (son 6 ay),
+  ödeme durumuna göre tutar dağılımı, en yüksek bakiyeli cariler. Yeni
+  backend/D1 gerekmedi - hepsi mevcut uçlardan istemci tarafında
+  hesaplanıyor. Her grafik kartında bir "tablo olarak göster" düğmesi var
+  (erişilebilirlik - hiçbir veri sadece grafiğe hapsolmuyor).
 
 ## Nasıl çalışır
 
