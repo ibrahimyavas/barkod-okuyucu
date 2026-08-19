@@ -11,7 +11,13 @@ const FALLBACK_INTERVAL_MS = 66; // ~15fps, used only when requestVideoFrameCall
  * where unsupported) and is guarded against overlap so a slow decode never
  * queues up a backlog of frames.
  */
-export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, resolveDetector = resolveBarcodeDetector, onDetect }) {
+export function useCameraScanner({
+  enabled,
+  formats = DEFAULT_FORMATS,
+  resolveDetector = resolveBarcodeDetector,
+  cropRegion = null, // { widthPct, heightPct } - analyze only a centered region, downscaled, instead of the full frame
+  onDetect,
+}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -23,6 +29,9 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, resolveDe
   const lastAcceptedRef = useRef({ code: null, at: 0 });
   const onDetectRef = useRef(onDetect);
   onDetectRef.current = onDetect;
+  const cropRegionRef = useRef(cropRegion);
+  cropRegionRef.current = cropRegion;
+  const cropCanvasRef = useRef(null);
 
   const [devices, setDevices] = useState([]);
   const [activeDeviceId, setActiveDeviceId] = useState(null);
@@ -69,6 +78,37 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, resolveDe
     ctx.fillText(barcode.rawValue, pts[0].x * scaleX, Math.max(14, pts[0].y * scaleY - 8));
   }, []);
 
+  // When cropRegion is set (QR mode), analyze a centered crop of the frame
+  // instead of the whole 1920x1080 image, downscaled to a modest cap. WASM
+  // decode time scales with pixel count, so this is a large, direct win for
+  // QR responsiveness - and since QR codes are usually held well within
+  // frame anyway, nothing worth detecting is lost. Barcode mode passes no
+  // cropRegion, so this is a no-op there - `detect(video)` runs on the full
+  // frame exactly as before.
+  function getDetectSource(video) {
+    const region = cropRegionRef.current;
+    if (!region || !video.videoWidth) return video;
+
+    const srcW = video.videoWidth * region.widthPct;
+    const srcH = video.videoHeight * region.heightPct;
+    const srcX = (video.videoWidth - srcW) / 2;
+    const srcY = (video.videoHeight - srcH) / 2;
+
+    const maxDim = 640;
+    const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+    const outW = Math.max(1, Math.round(srcW * scale));
+    const outH = Math.max(1, Math.round(srcH * scale));
+
+    if (!cropCanvasRef.current) cropCanvasRef.current = document.createElement("canvas");
+    const canvas = cropCanvasRef.current;
+    if (canvas.width !== outW || canvas.height !== outH) {
+      canvas.width = outW;
+      canvas.height = outH;
+    }
+    canvas.getContext("2d").drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+    return canvas;
+  }
+
   // Held in a ref (rather than a plain useCallback) so `schedule` below can
   // always call the latest version without the two needing to reference each
   // other before either is defined.
@@ -81,9 +121,14 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, resolveDe
     }
     busyRef.current = true;
     try {
-      const results = await detectorRef.current.detect(video);
+      const source = getDetectSource(video);
+      const results = await detectorRef.current.detect(source);
       const best = results[0] || null;
-      drawOverlay(best);
+      // Corner points from a cropped/scaled source are in that canvas's
+      // coordinate space, not the full video's - don't try to map them back
+      // onto the overlay. The flash/toast in ScannerView covers the "yes,
+      // got it" feedback in that mode instead.
+      drawOverlay(source === video ? best : null);
       if (best) {
         const now = Date.now();
         const last = lastAcceptedRef.current;

@@ -727,6 +727,75 @@ select.status-badge {
   pointer-events: none;
 }
 
+/* QR kodlar kare olduğu için geniş-kısa değil, kareye yakın bir kılavuz -
+   gerçek analiz bölgesiyle (useCameraScanner:getDetectSource) birebir
+   piksel eşleşmesi gerekmiyor, sadece doğru hizada nereye tutulacağını
+   göstermesi yeterli. */
+.camera-reticle-qr {
+  left: 25%;
+  right: 25%;
+  top: 20%;
+  bottom: 20%;
+}
+
+.scan-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: scan-flash 0.7s ease-out forwards;
+}
+
+@keyframes scan-flash {
+  0% {
+    box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  25% {
+    box-shadow: inset 0 0 0 8px rgba(34, 197, 94, 0.55);
+  }
+  100% {
+    box-shadow: inset 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+}
+
+.scan-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  background: var(--good);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  max-width: 85%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  animation: scan-toast 1.4s ease-out forwards;
+}
+
+@keyframes scan-toast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
 .camera-status {
   position: absolute;
   left: 50%;

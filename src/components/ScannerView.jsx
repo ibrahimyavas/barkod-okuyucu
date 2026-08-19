@@ -10,6 +10,12 @@ import CameraPanel from "./CameraPanel.jsx";
 import ScanTable from "./ScanTable.jsx";
 import ManualEntry from "./ManualEntry.jsx";
 
+// QR modunda tüm kareyi değil, ortadaki bu bölgeyi (aşağı ölçeklenmiş
+// olarak) analiz ediyoruz - WASM çözme süresi piksel sayısıyla orantılı,
+// bu da hem tepki hızını hem pratikte okuma başarısını belirgin şekilde
+// artırıyor. bkz. hooks/useCameraScanner.js:getDetectSource.
+const QR_CROP_REGION = { widthPct: 0.65, heightPct: 0.65 };
+
 export default function ScannerView({ onSendToEntry }) {
   const { scans, addScan, removeScan, clearAll, totalCount } = useScanStore();
   const [cameraOn, setCameraOn] = useState(true);
@@ -19,6 +25,11 @@ export default function ScannerView({ onSendToEntry }) {
   // "barkod" (varsayılan, dokunulmadı) vs "qr" - QR modu her zaman WASM
   // motorunu zorluyor, bkz. lib/barcodeDetector.js:resolveQrOnlyDetector.
   const [scanMode, setScanMode] = useState("barkod");
+  // Kamera üstündeki yeşil flaş + "✓ kod" bandını tetikler - bkz.
+  // CameraPanel.jsx. Asla null'a dönmüyor; her yeni tarama zamandamgasını
+  // (key olarak kullanılıyor) güncelleyip CSS animasyonunu yeniden
+  // başlatıyor, animasyon kendi kendine söner (animation-fill-mode).
+  const [lastHit, setLastHit] = useState(null);
 
   const feedback = useCallback(
     (outcome) => {
@@ -32,6 +43,7 @@ export default function ScannerView({ onSendToEntry }) {
     (code, format) => {
       const outcome = addScan(code, { format, source: "camera" });
       if (outcome) feedback(outcome);
+      setLastHit({ code, ts: Date.now() });
     },
     [addScan, feedback]
   );
@@ -56,6 +68,7 @@ export default function ScannerView({ onSendToEntry }) {
     enabled: cameraOn,
     formats: scanMode === "qr" ? QR_ONLY_FORMATS : DEFAULT_FORMATS,
     resolveDetector: scanMode === "qr" ? resolveQrOnlyDetector : undefined,
+    cropRegion: scanMode === "qr" ? QR_CROP_REGION : null,
     onDetect: handleCameraDetect,
   });
   useKeyboardWedge({ enabled: wedgeOn, slowDevice, onScan: handleWedgeScan });
@@ -106,7 +119,13 @@ export default function ScannerView({ onSendToEntry }) {
         </span>
       </div>
 
-      <CameraPanel camera={camera} cameraOn={cameraOn} onToggleCamera={() => setCameraOn((v) => !v)} />
+      <CameraPanel
+        camera={camera}
+        cameraOn={cameraOn}
+        onToggleCamera={() => setCameraOn((v) => !v)}
+        scanMode={scanMode}
+        lastHit={lastHit}
+      />
 
       <ManualEntry onAdd={handleManualAdd} />
 

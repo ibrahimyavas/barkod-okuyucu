@@ -1,6 +1,6 @@
 import { Camera, CameraOff, Zap, ZapOff, SwitchCamera } from "lucide-react";
 
-export default function CameraPanel({ camera, cameraOn, onToggleCamera }) {
+export default function CameraPanel({ camera, cameraOn, onToggleCamera, scanMode, lastHit }) {
   const {
     videoRef,
     canvasRef,
@@ -28,7 +28,15 @@ export default function CameraPanel({ camera, cameraOn, onToggleCamera }) {
           <>
             <video ref={videoRef} playsInline muted className="camera-video" />
             <canvas ref={canvasRef} className="camera-overlay" />
-            <div className="camera-reticle" aria-hidden="true" />
+            <div className={`camera-reticle ${scanMode === "qr" ? "camera-reticle-qr" : ""}`} aria-hidden="true" />
+            {/* key = zaman damgası: her yeni taramada eleman yeniden monte
+                olur, bu da CSS animasyonunu (flaş + bant) baştan başlatır. */}
+            {lastHit && <div key={lastHit.ts} className="scan-flash" aria-hidden="true" />}
+            {lastHit && (
+              <div key={`toast-${lastHit.ts}`} className="scan-toast">
+                ✓ {lastHit.code}
+              </div>
+            )}
             {starting && <div className="camera-status">Kamera başlatılıyor…</div>}
             {error && <div className="camera-status camera-status-error">{error}</div>}
           </>
