@@ -873,6 +873,13 @@ select.status-badge {
 .camera-frame {
   position: relative;
   width: 100%;
+  /* Üst sınır yoktu - geniş ekranlarda (ör. .main-content'in 1100px'e kadar
+     çıkabildiği masaüstü) 4:3 oranla 800px'in üstünde bir yüksekliğe
+     şişip sayfanın geri kalanını ekran dışına itiyordu. max-width bunu
+     makul bir boyutta tutuyor, mobilde (konteyner zaten dar) hiçbir şey
+     değişmiyor. */
+  max-width: 480px;
+  margin: 0 auto;
   aspect-ratio: 4 / 3;
   background: #000;
   border-radius: var(--radius);
