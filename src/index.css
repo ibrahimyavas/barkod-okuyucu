@@ -1,3 +1,7 @@
+/* Theme tokens. Bare :root holds the dark palette (this app's original,
+   default look). An explicit [data-theme] - set by the toggle in the header,
+   see hooks/useTheme.js - wins over everything, in either direction. Until
+   the user ever touches the toggle, the OS's prefers-color-scheme decides. */
 :root {
   --bg: #0b1120;
   --panel: #131c31;
@@ -7,8 +11,81 @@
   --text-muted: #8fa0c2;
   --accent: #22c55e;
   --accent-dim: #14532d;
+  --accent-on-dim: #bbf7d0;
   --danger: #ef4444;
+  --danger-text: #fca5a5;
+  --good: #22c55e;
+  --good-text: #bbf7d0;
+  --warning: #eab308;
+  --warning-text: #fde68a;
+  --info: #3b82f6;
+  --info-text: #93c5fd;
   --radius: 12px;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --panel-2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --accent: #16a34a;
+    --accent-dim: #dcfce7;
+    --accent-on-dim: #166534;
+    --danger: #dc2626;
+    --danger-text: #b91c1c;
+    --good: #16a34a;
+    --good-text: #15803d;
+    --warning: #ca8a04;
+    --warning-text: #854d0e;
+    --info: #2563eb;
+    --info-text: #1d4ed8;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --panel-2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --accent: #16a34a;
+  --accent-dim: #dcfce7;
+  --accent-on-dim: #166534;
+  --danger: #dc2626;
+  --danger-text: #b91c1c;
+  --good: #16a34a;
+  --good-text: #15803d;
+  --warning: #ca8a04;
+  --warning-text: #854d0e;
+  --info: #2563eb;
+  --info-text: #1d4ed8;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b1120;
+  --panel: #131c31;
+  --panel-2: #1b2740;
+  --border: #253453;
+  --text: #e6ecf7;
+  --text-muted: #8fa0c2;
+  --accent: #22c55e;
+  --accent-dim: #14532d;
+  --accent-on-dim: #bbf7d0;
+  --danger: #ef4444;
+  --danger-text: #fca5a5;
+  --good: #22c55e;
+  --good-text: #bbf7d0;
+  --warning: #eab308;
+  --warning-text: #fde68a;
+  --info: #3b82f6;
+  --info-text: #93c5fd;
   color-scheme: dark;
 }
 
@@ -100,6 +177,11 @@ body {
 .app-header h1 {
   font-size: 1.25rem;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 6px;
 }
 
 .detector-row {
@@ -220,7 +302,7 @@ body {
 
 .form-error {
   grid-column: 1 / -1;
-  color: #fca5a5;
+  color: var(--danger-text);
   font-size: 0.85rem;
   margin: 0;
 }
@@ -233,7 +315,7 @@ body {
   gap: 6px;
   background: var(--accent-dim);
   border: 1px solid var(--accent);
-  color: #bbf7d0;
+  color: var(--accent-on-dim);
   border-radius: 10px;
   padding: 10px 16px;
   font-size: 0.9rem;
@@ -364,18 +446,18 @@ body {
 }
 
 .status-badge.status-beklemede {
-  color: #fde68a;
-  border-color: #eab308;
+  color: var(--warning-text);
+  border-color: var(--warning);
 }
 
 .status-badge.status-kismi {
-  color: #93c5fd;
-  border-color: #3b82f6;
+  color: var(--info-text);
+  border-color: var(--info);
 }
 
 .status-badge.status-odendi {
-  color: #bbf7d0;
-  border-color: var(--accent);
+  color: var(--good-text);
+  border-color: var(--good);
 }
 
 .status-badge.status-iptal {
@@ -385,7 +467,7 @@ body {
 }
 
 .status-badge.status-gecikti {
-  color: #fca5a5;
+  color: var(--danger-text);
   border-color: var(--danger);
   margin-left: 4px;
   cursor: default;
@@ -539,12 +621,12 @@ select.status-badge {
 .icon-btn.active {
   background: var(--accent-dim);
   border-color: var(--accent);
-  color: #bbf7d0;
+  color: var(--accent-on-dim);
 }
 
 .icon-btn.danger:hover {
   border-color: var(--danger);
-  color: #fecaca;
+  color: var(--danger-text);
 }
 
 .icon-btn.labeled {
@@ -579,7 +661,7 @@ select.status-badge {
 .manual-entry button {
   background: var(--accent-dim);
   border: 1px solid var(--accent);
-  color: #bbf7d0;
+  color: var(--accent-on-dim);
   border-radius: 10px;
   padding: 0 16px;
   cursor: pointer;
@@ -704,18 +786,18 @@ select.status-badge {
 }
 
 .source-badge.source-camera {
-  color: #7dd3fc;
-  border-color: #0ea5e9;
+  color: var(--info-text);
+  border-color: var(--info);
 }
 
 .source-badge.source-gadget {
-  color: #bbf7d0;
-  border-color: var(--accent);
+  color: var(--good-text);
+  border-color: var(--good);
 }
 
 .source-badge.source-manual {
-  color: #fde68a;
-  border-color: #eab308;
+  color: var(--warning-text);
+  border-color: var(--warning);
 }
 
 /* ---- label printing ------------------------------------------------------ */
@@ -1216,7 +1298,7 @@ select.status-badge {
 
 .date-picker-day.is-selected {
   background: var(--accent-dim);
-  color: #bbf7d0;
+  color: var(--accent-on-dim);
   font-weight: 700;
 }
 

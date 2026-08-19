@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck, LogOut } from "lucide-react";
+import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck, Sun, Moon, LogOut } from "lucide-react";
+import { useTheme } from "./hooks/useTheme.js";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
@@ -27,6 +28,7 @@ const TABS = [
 ];
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [view, setView] = useState("scanner");
@@ -66,9 +68,18 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>Small ERP</h1>
-        <button className="icon-btn" onClick={handleLogout} title="Çıkış yap">
-          <LogOut size={16} />
-        </button>
+        <div className="header-actions">
+          <button
+            className="icon-btn"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
+          >
+            {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+          </button>
+          <button className="icon-btn" onClick={handleLogout} title="Çıkış yap">
+            <LogOut size={16} />
+          </button>
+        </div>
       </header>
 
       <nav className="tab-nav">
