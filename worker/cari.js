@@ -63,6 +63,43 @@ async function createAccount(request, env) {
   return json({ id, createdAt: now }, { status: 201 });
 }
 
+async function updateAccount(request, env, id) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+  }
+
+  const sets = [];
+  const values = [];
+  let idx = 1;
+  if (Object.prototype.hasOwnProperty.call(body, "ad")) {
+    const ad = String(body.ad ?? "").trim();
+    if (!ad) return json({ error: "Cari adı boş olamaz." }, { status: 400 });
+    sets.push(`ad = ?${idx++}`);
+    values.push(ad);
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "tur")) {
+    if (!ACCOUNT_TYPES.has(body.tur)) return json({ error: "Geçersiz tür." }, { status: 400 });
+    sets.push(`tur = ?${idx++}`);
+    values.push(body.tur);
+  }
+  for (const key of ["telefon", "adres"]) {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      sets.push(`${key} = ?${idx++}`);
+      values.push(String(body[key] ?? "").trim() || null);
+    }
+  }
+  if (sets.length === 0) return json({ error: "Güncellenecek alan belirtilmedi." }, { status: 400 });
+
+  values.push(id);
+  await env.DB.prepare(`UPDATE cari_hesaplar SET ${sets.join(", ")} WHERE id = ?${idx}`)
+    .bind(...values)
+    .run();
+  return json({ ok: true });
+}
+
 async function deleteAccount(env, id) {
   // Kendi hareketlerini de temizle - D1'de FK cascade'e güvenmek yerine.
   await env.DB.prepare("DELETE FROM cari_hareketler WHERE cari_id = ?1").bind(id).run();
@@ -104,6 +141,45 @@ async function createMovement(request, env, cariId) {
   return json({ id, createdAt: now }, { status: 201 });
 }
 
+async function updateMovement(request, env, id) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+  }
+
+  const sets = [];
+  const values = [];
+  let idx = 1;
+  if (Object.prototype.hasOwnProperty.call(body, "tur")) {
+    if (!MOVEMENT_TYPES.has(body.tur)) return json({ error: "Geçersiz hareket türü." }, { status: 400 });
+    sets.push(`tur = ?${idx++}`);
+    values.push(body.tur);
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "tutar")) {
+    const tutar = Number(body.tutar);
+    if (!Number.isFinite(tutar) || tutar <= 0) {
+      return json({ error: "Tutar sıfırdan büyük bir sayı olmalı." }, { status: 400 });
+    }
+    sets.push(`tutar = ?${idx++}`);
+    values.push(tutar);
+  }
+  for (const key of ["aciklama", "tarih"]) {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      sets.push(`${key} = ?${idx++}`);
+      values.push(String(body[key] ?? "").trim() || null);
+    }
+  }
+  if (sets.length === 0) return json({ error: "Güncellenecek alan belirtilmedi." }, { status: 400 });
+
+  values.push(id);
+  await env.DB.prepare(`UPDATE cari_hareketler SET ${sets.join(", ")} WHERE id = ?${idx}`)
+    .bind(...values)
+    .run();
+  return json({ ok: true });
+}
+
 async function deleteMovement(env, id) {
   await env.DB.prepare("DELETE FROM cari_hareketler WHERE id = ?1").bind(id).run();
   return json({ ok: true });
@@ -121,6 +197,9 @@ export async function handleCariRoute(request, env, pathname) {
   if (accountMatch && request.method === "DELETE") {
     return deleteAccount(env, accountMatch[1]);
   }
+  if (accountMatch && request.method === "PATCH") {
+    return updateAccount(request, env, accountMatch[1]);
+  }
 
   const movementsMatch = pathname.match(/^\/api\/cari-hesaplar\/([^/]+)\/hareketler$/);
   if (movementsMatch) {
@@ -131,6 +210,9 @@ export async function handleCariRoute(request, env, pathname) {
   const movementMatch = pathname.match(/^\/api\/cari-hareketler\/([^/]+)$/);
   if (movementMatch && request.method === "DELETE") {
     return deleteMovement(env, movementMatch[1]);
+  }
+  if (movementMatch && request.method === "PATCH") {
+    return updateMovement(request, env, movementMatch[1]);
   }
 
   return null;

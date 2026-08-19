@@ -51,6 +51,10 @@ export function createSupplier(supplier) {
   return request("/api/suppliers", withJsonBody("POST", supplier));
 }
 
+export function updateSupplier(id, fields) {
+  return request(`/api/suppliers/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
 export function deleteSupplier(id) {
   return request(`/api/suppliers/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
@@ -64,8 +68,8 @@ export function createPurchase(purchase) {
   return request("/api/purchases", withJsonBody("POST", purchase));
 }
 
-export function updatePurchaseStatus(id, odemeDurumu) {
-  return request(`/api/purchases/${encodeURIComponent(id)}`, withJsonBody("PATCH", { odemeDurumu }));
+export function updatePurchase(id, fields) {
+  return request(`/api/purchases/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
 }
 
 export function deletePurchase(id) {
@@ -81,6 +85,10 @@ export function createCariAccount(account) {
   return request("/api/cari-hesaplar", withJsonBody("POST", account));
 }
 
+export function updateCariAccount(id, fields) {
+  return request(`/api/cari-hesaplar/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
 export function deleteCariAccount(id) {
   return request(`/api/cari-hesaplar/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
@@ -92,6 +100,10 @@ export async function fetchCariMovements(cariId) {
 
 export function createCariMovement(cariId, movement) {
   return request(`/api/cari-hesaplar/${encodeURIComponent(cariId)}/hareketler`, withJsonBody("POST", movement));
+}
+
+export function updateCariMovement(id, fields) {
+  return request(`/api/cari-hareketler/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
 }
 
 export function deleteCariMovement(id) {

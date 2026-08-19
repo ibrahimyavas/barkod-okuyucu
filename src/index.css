@@ -245,6 +245,34 @@ body {
   cursor: not-allowed;
 }
 
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.form-actions .submit-btn {
+  flex: 1;
+  min-width: 160px;
+}
+
+.editing-row {
+  background: var(--panel-2);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.date-divider td {
+  padding: 6px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--panel-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+
 .row-actions {
   display: flex;
   gap: 4px;

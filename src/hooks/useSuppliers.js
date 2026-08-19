@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchSuppliers, createSupplier, deleteSupplier } from "../lib/api.js";
+import { fetchSuppliers, createSupplier, updateSupplier, deleteSupplier } from "../lib/api.js";
 
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState([]);
@@ -31,6 +31,14 @@ export function useSuppliers() {
     [reload]
   );
 
+  const editSupplier = useCallback(
+    async (id, fields) => {
+      await updateSupplier(id, fields);
+      await reload();
+    },
+    [reload]
+  );
+
   const removeSupplier = useCallback(
     async (id) => {
       const prev = suppliers;
@@ -45,5 +53,5 @@ export function useSuppliers() {
     [suppliers]
   );
 
-  return { suppliers, loading, error, addSupplier, removeSupplier, reload };
+  return { suppliers, loading, error, addSupplier, editSupplier, removeSupplier, reload };
 }

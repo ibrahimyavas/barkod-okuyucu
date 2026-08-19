@@ -64,6 +64,40 @@ async function createSupplier(request, env) {
   return json({ id, createdAt: now }, { status: 201 });
 }
 
+const SUPPLIER_FIELDS = { ad: "ad", yetkili: "yetkili", telefon: "telefon", adres: "adres" };
+
+async function updateSupplier(request, env, id) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+  }
+
+  const sets = [];
+  const values = [];
+  let idx = 1;
+  if (Object.prototype.hasOwnProperty.call(body, "ad")) {
+    const ad = String(body.ad ?? "").trim();
+    if (!ad) return json({ error: "Tedarikçi adı boş olamaz." }, { status: 400 });
+    sets.push(`ad = ?${idx++}`);
+    values.push(ad);
+  }
+  for (const key of ["yetkili", "telefon", "adres"]) {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      sets.push(`${SUPPLIER_FIELDS[key]} = ?${idx++}`);
+      values.push(String(body[key] ?? "").trim() || null);
+    }
+  }
+  if (sets.length === 0) return json({ error: "Güncellenecek alan belirtilmedi." }, { status: 400 });
+
+  values.push(id);
+  await env.DB.prepare(`UPDATE suppliers SET ${sets.join(", ")} WHERE id = ?${idx}`)
+    .bind(...values)
+    .run();
+  return json({ ok: true });
+}
+
 async function deleteSupplier(env, id) {
   await env.DB.prepare("DELETE FROM suppliers WHERE id = ?1").bind(id).run();
   return json({ ok: true });
@@ -132,17 +166,85 @@ async function createPurchase(request, env) {
   return json({ id, createdAt: now, toplamTutar }, { status: 201 });
 }
 
-async function updatePurchaseStatus(request, env, id) {
+const PURCHASE_TEXT_FIELDS = {
+  supplierId: "supplier_id",
+  tedarikciAdi: "tedarikci_adi",
+  barkod: "barkod",
+  birim: "birim",
+  tarih: "tarih",
+  notMetni: "not_metni",
+};
+
+// Partial update - handles both the quick "click the status badge" cycle
+// (body: { odemeDurumu }) and the full "Düzenle" edit form (any subset of
+// fields). If miktar/birimFiyat are both being edited and toplamTutar isn't
+// explicitly given in the same request, it's recalculated - same rule
+// createPurchase uses, so an edit can't silently leave a stale total.
+async function updatePurchase(request, env, id) {
   let body;
   try {
     body = await request.json();
   } catch {
     return json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
-  if (!PAYMENT_STATUSES.has(body.odemeDurumu)) {
+
+  if (Object.prototype.hasOwnProperty.call(body, "odemeDurumu") && !PAYMENT_STATUSES.has(body.odemeDurumu)) {
     return json({ error: "Geçersiz ödeme durumu." }, { status: 400 });
   }
-  await env.DB.prepare("UPDATE purchases SET odeme_durumu = ?1 WHERE id = ?2").bind(body.odemeDurumu, id).run();
+
+  const sets = [];
+  const values = [];
+  let idx = 1;
+
+  if (Object.prototype.hasOwnProperty.call(body, "urunAdi")) {
+    const urunAdi = String(body.urunAdi ?? "").trim();
+    if (!urunAdi) return json({ error: "Ürün adı boş olamaz." }, { status: 400 });
+    sets.push(`urun_adi = ?${idx++}`);
+    values.push(urunAdi);
+  }
+  for (const [key, column] of Object.entries(PURCHASE_TEXT_FIELDS)) {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      sets.push(`${column} = ?${idx++}`);
+      values.push(String(body[key] ?? "").trim() || null);
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "odemeDurumu")) {
+    sets.push(`odeme_durumu = ?${idx++}`);
+    values.push(body.odemeDurumu);
+  }
+
+  let miktar, birimFiyat;
+  for (const [key, label] of [["miktar", "Miktar"], ["birimFiyat", "Birim fiyat"]]) {
+    if (!Object.prototype.hasOwnProperty.call(body, key)) continue;
+    const raw = body[key];
+    const n = raw === "" || raw == null ? null : Number(raw);
+    if (n != null && !Number.isFinite(n)) return json({ error: `${label} geçerli bir sayı olmalı.` }, { status: 400 });
+    if (key === "miktar") miktar = n;
+    else birimFiyat = n;
+    sets.push(`${key === "miktar" ? "miktar" : "birim_fiyat"} = ?${idx++}`);
+    values.push(n);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "toplamTutar")) {
+    const raw = body.toplamTutar;
+    const n = raw === "" || raw == null ? null : Number(raw);
+    if (n != null && !Number.isFinite(n)) return json({ error: "Toplam tutar geçerli bir sayı olmalı." }, { status: 400 });
+    sets.push(`toplam_tutar = ?${idx++}`);
+    values.push(n);
+  } else if (miktar !== undefined && birimFiyat !== undefined && miktar != null && birimFiyat != null) {
+    sets.push(`toplam_tutar = ?${idx++}`);
+    values.push(Math.round(miktar * birimFiyat * 100) / 100);
+  }
+
+  if (sets.length === 0) {
+    return json({ error: "Güncellenecek alan belirtilmedi." }, { status: 400 });
+  }
+
+  values.push(id);
+  await env.DB.prepare(`UPDATE purchases SET ${sets.join(", ")} WHERE id = ?${idx}`)
+    .bind(...values)
+    .run();
+
   return json({ ok: true });
 }
 
@@ -162,6 +264,9 @@ export async function handlePurchasesRoute(request, env, pathname) {
   if (supplierMatch && request.method === "DELETE") {
     return deleteSupplier(env, supplierMatch[1]);
   }
+  if (supplierMatch && request.method === "PATCH") {
+    return updateSupplier(request, env, supplierMatch[1]);
+  }
 
   if (pathname === "/api/purchases") {
     if (request.method === "GET") return listPurchases(env);
@@ -172,7 +277,7 @@ export async function handlePurchasesRoute(request, env, pathname) {
     return deletePurchase(env, purchaseMatch[1]);
   }
   if (purchaseMatch && request.method === "PATCH") {
-    return updatePurchaseStatus(request, env, purchaseMatch[1]);
+    return updatePurchase(request, env, purchaseMatch[1]);
   }
 
   return null;

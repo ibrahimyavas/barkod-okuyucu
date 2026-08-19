@@ -74,8 +74,17 @@ async function createProduct(request, env) {
   return json({ id, createdAt: now }, { status: 201 });
 }
 
-// Partial update - used by the stock adjuster (miktar) and the min. stock
-// threshold editor. Only touches the fields actually present in the body.
+const TEXT_FIELDS = {
+  barkod: "barkod",
+  kategori: "kategori",
+  depoKonumu: "depo_konumu",
+  alinisTarihi: "alinis_tarihi",
+  birim: "birim",
+};
+
+// Partial update - only touches fields actually present in the body. Used by
+// the stock adjuster (miktar/minStok) and by the full "Düzenle" edit form
+// (every other field).
 async function updateProduct(request, env, id) {
   let body;
   try {
@@ -88,6 +97,24 @@ async function updateProduct(request, env, id) {
   const values = [];
   let idx = 1;
 
+  if (Object.prototype.hasOwnProperty.call(body, "urunAdi")) {
+    const urunAdi = String(body.urunAdi ?? "").trim();
+    if (!urunAdi) return json({ error: "Ürün adı boş olamaz." }, { status: 400 });
+    sets.push(`urun_adi = ?${idx++}`);
+    values.push(urunAdi);
+  }
+  for (const [key, column] of Object.entries(TEXT_FIELDS)) {
+    if (Object.prototype.hasOwnProperty.call(body, key)) {
+      sets.push(`${column} = ?${idx++}`);
+      values.push(String(body[key] ?? "").trim() || null);
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "maliyet")) {
+    const r = parseOptionalNumber(body.maliyet, "Maliyet");
+    if (!r.ok) return json({ error: r.error }, { status: 400 });
+    sets.push(`maliyet = ?${idx++}`);
+    values.push(r.value);
+  }
   if (Object.prototype.hasOwnProperty.call(body, "miktar")) {
     const r = parseOptionalNumber(body.miktar, "Miktar");
     if (!r.ok) return json({ error: r.error }, { status: 400 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchPurchases, createPurchase, updatePurchaseStatus, deletePurchase } from "../lib/api.js";
+import { fetchPurchases, createPurchase, updatePurchase, deletePurchase } from "../lib/api.js";
 
 export function usePurchases() {
   const [purchases, setPurchases] = useState([]);
@@ -35,13 +35,23 @@ export function usePurchases() {
       const prev = purchases;
       setPurchases((cur) => cur.map((p) => (p.id === id ? { ...p, odemeDurumu: nextStatus } : p))); // optimistic
       try {
-        await updatePurchaseStatus(id, nextStatus);
+        await updatePurchase(id, { odemeDurumu: nextStatus });
       } catch (err) {
         setError(err.message);
         setPurchases(prev);
       }
     },
     [purchases]
+  );
+
+  // Full reload rather than optimistic merge - toplamTutar may be
+  // recalculated server-side when miktar/birimFiyat change.
+  const editPurchase = useCallback(
+    async (id, fields) => {
+      await updatePurchase(id, fields);
+      await reload();
+    },
+    [reload]
   );
 
   const removePurchase = useCallback(
@@ -58,5 +68,5 @@ export function usePurchases() {
     [purchases]
   );
 
-  return { purchases, loading, error, addPurchase, cycleStatus, removePurchase };
+  return { purchases, loading, error, addPurchase, cycleStatus, editPurchase, removePurchase };
 }

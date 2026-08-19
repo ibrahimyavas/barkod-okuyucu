@@ -1,7 +1,18 @@
-# Barkod Okuyucu
+# Small ERP
 
-Tek şifreyle korunan, sekmeli bir küçük işletme uygulaması. Şu an içindeki
-sekmeler:
+Tek şifreyle korunan, sekmeli bir küçük işletme uygulaması. Worker/repo adı
+hâlâ `barkod-okuyucu` (URL'yi bozmamak için bilinçli olarak değiştirilmedi) -
+uygulamanın adı sadece görünümde "Small ERP".
+
+Ürün Girişi, Satın Alma (+tedarikçiler), Cari Hesap (hesap ve hareketler) ve
+Lojistik'teki tüm kayıtlar eklendikten sonra da **düzenlenebilir** - her
+tabloda bir ✏️ (Düzenle) düğmesi formu o kaydın verileriyle doldurur, kaydet
+butonu "Güncelle"ye döner. Satın Alma/Cari Hesap/Lojistik listeleri ayrıca
+**gün gün gruplanır** (Bugün / Dün / 19 Ağustos 2026 gibi başlıklarla,
+tarihsiz kayıtlar en altta "Tarihsiz" başlığı altında) - `src/lib/format.js`
+içindeki `groupByDate`.
+
+Şu an içindeki sekmeler:
 
 - **Tarayıcı:** Kamera ve el terminali (USB/Bluetooth barkod tabancası) ile
   hızlı barkod okuma. Okunan her kod ekrandaki listeye eklenir; aynı kod

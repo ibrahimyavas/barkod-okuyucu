@@ -65,7 +65,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Barkod Okuyucu</h1>
+        <h1>Small ERP</h1>
         <button className="icon-btn" onClick={handleLogout} title="Çıkış yap">
           <LogOut size={16} />
         </button>

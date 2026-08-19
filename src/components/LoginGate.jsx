@@ -26,7 +26,7 @@ export default function LoginGate({ onSuccess }) {
     <div className="login-gate">
       <form className="login-card" onSubmit={handleSubmit}>
         <Lock size={28} />
-        <h2>Barkod Okuyucu</h2>
+        <h2>Small ERP</h2>
         <input
           type="password"
           placeholder="Şifre"

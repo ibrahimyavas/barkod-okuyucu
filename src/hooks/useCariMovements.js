@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchCariMovements, createCariMovement, deleteCariMovement } from "../lib/api.js";
+import { fetchCariMovements, createCariMovement, updateCariMovement, deleteCariMovement } from "../lib/api.js";
 
 // `onChanged` lets the caller (the accounts list) know a balance may have
 // shifted, so it can re-fetch and show the updated bakiye without this hook
@@ -38,6 +38,15 @@ export function useCariMovements(cariId, onChanged) {
     [cariId, reload, onChanged]
   );
 
+  const editMovement = useCallback(
+    async (id, fields) => {
+      await updateCariMovement(id, fields);
+      await reload();
+      onChanged?.();
+    },
+    [reload, onChanged]
+  );
+
   const removeMovement = useCallback(
     async (id) => {
       const prev = movements;
@@ -53,5 +62,5 @@ export function useCariMovements(cariId, onChanged) {
     [movements, onChanged]
   );
 
-  return { movements, loading, error, addMovement, removeMovement };
+  return { movements, loading, error, addMovement, editMovement, removeMovement };
 }

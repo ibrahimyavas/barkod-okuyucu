@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
-import { Landmark, Plus, Trash2, Search, ArrowLeft } from "lucide-react";
+import { Fragment, useCallback, useMemo, useState } from "react";
+import { Landmark, Plus, Pencil, Trash2, X, Search, ArrowLeft } from "lucide-react";
 import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { useCariMovements } from "../hooks/useCariMovements.js";
-import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
+import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
 
 const EMPTY_ACCOUNT = { ad: "", tur: "musteri", telefon: "", adres: "" };
 const EMPTY_MOVEMENT = { tur: "borc", tutar: "", aciklama: "", tarih: todayISO() };
@@ -19,8 +19,9 @@ function balanceLabel(bakiye) {
 }
 
 export default function CariHesapDashboard() {
-  const { accounts, loading, error, addAccount, removeAccount, reload } = useCariAccounts();
+  const { accounts, loading, error, addAccount, editAccount, removeAccount, reload } = useCariAccounts();
   const [form, setForm] = useState(EMPTY_ACCOUNT);
+  const [editingAccountId, setEditingAccountId] = useState(null);
   const [formError, setFormError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [query, setQuery] = useState("");
@@ -32,10 +33,12 @@ export default function CariHesapDashboard() {
     loading: movementsLoading,
     error: movementsError,
     addMovement,
+    editMovement,
     removeMovement,
   } = useCariMovements(selectedId, onMovementsChanged);
 
   const [moveForm, setMoveForm] = useState(EMPTY_MOVEMENT);
+  const [editingMoveId, setEditingMoveId] = useState(null);
   const [moveError, setMoveError] = useState(null);
   const [moveSubmitting, setMoveSubmitting] = useState(false);
 
@@ -44,6 +47,8 @@ export default function CariHesapDashboard() {
     if (!q) return accounts;
     return accounts.filter((a) => [a.ad, a.telefon].some((v) => v?.toLowerCase().includes(q)));
   }, [accounts, query]);
+
+  const movementGroups = useMemo(() => groupByDate(movements, (m) => m.tarih), [movements]);
 
   const stats = useMemo(() => {
     let alacak = 0;
@@ -58,6 +63,19 @@ export default function CariHesapDashboard() {
 
   const selected = accounts.find((a) => a.id === selectedId) || null;
 
+  function startEditAccount(a, e) {
+    e?.stopPropagation();
+    setEditingAccountId(a.id);
+    setForm({ ad: a.ad || "", tur: a.tur || "musteri", telefon: a.telefon || "", adres: a.adres || "" });
+    setFormError(null);
+  }
+
+  function cancelEditAccount() {
+    setEditingAccountId(null);
+    setForm(EMPTY_ACCOUNT);
+    setFormError(null);
+  }
+
   async function handleAccountSubmit(e) {
     e.preventDefault();
     const ad = form.ad.trim();
@@ -68,13 +86,30 @@ export default function CariHesapDashboard() {
     setSubmitting(true);
     setFormError(null);
     try {
-      await addAccount({ ...form, ad });
+      if (editingAccountId) {
+        await editAccount(editingAccountId, { ...form, ad });
+        setEditingAccountId(null);
+      } else {
+        await addAccount({ ...form, ad });
+      }
       setForm(EMPTY_ACCOUNT);
     } catch (err) {
       setFormError(err.message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function startEditMovement(m) {
+    setEditingMoveId(m.id);
+    setMoveForm({ tur: m.tur, tutar: m.tutar ?? "", aciklama: m.aciklama || "", tarih: m.tarih || todayISO() });
+    setMoveError(null);
+  }
+
+  function cancelEditMovement() {
+    setEditingMoveId(null);
+    setMoveForm({ ...EMPTY_MOVEMENT, tarih: moveForm.tarih });
+    setMoveError(null);
   }
 
   async function handleMovementSubmit(e) {
@@ -87,8 +122,14 @@ export default function CariHesapDashboard() {
     setMoveSubmitting(true);
     setMoveError(null);
     try {
-      await addMovement({ ...moveForm, tutar });
-      setMoveForm({ ...EMPTY_MOVEMENT, tarih: moveForm.tarih });
+      if (editingMoveId) {
+        await editMovement(editingMoveId, { ...moveForm, tutar });
+        setEditingMoveId(null);
+        setMoveForm({ ...EMPTY_MOVEMENT, tarih: moveForm.tarih });
+      } else {
+        await addMovement({ ...moveForm, tutar });
+        setMoveForm({ ...EMPTY_MOVEMENT, tarih: moveForm.tarih });
+      }
     } catch (err) {
       setMoveError(err.message);
     } finally {
@@ -156,10 +197,17 @@ export default function CariHesapDashboard() {
             />
           </div>
           {moveError && <p className="form-error">{moveError}</p>}
-          <button type="submit" className="submit-btn" disabled={moveSubmitting}>
-            <Plus size={16} />
-            {moveSubmitting ? "Ekleniyor…" : "Hareket Ekle"}
-          </button>
+          <div className="form-actions">
+            <button type="submit" className="submit-btn" disabled={moveSubmitting}>
+              {editingMoveId ? <Pencil size={16} /> : <Plus size={16} />}
+              {moveSubmitting ? "Kaydediliyor…" : editingMoveId ? "Hareketi Güncelle" : "Hareket Ekle"}
+            </button>
+            {editingMoveId && (
+              <button type="button" className="icon-btn" onClick={cancelEditMovement}>
+                <X size={16} /> İptal
+              </button>
+            )}
+          </div>
         </form>
 
         <div className="scan-table-wrap">
@@ -181,27 +229,42 @@ export default function CariHesapDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {movements.map((m) => (
-                    <tr key={m.id}>
-                      <td>
-                        <span className={`status-badge ${m.tur === "borc" ? "status-beklemede" : "status-odendi"}`}>
-                          {m.tur === "borc" ? "Borç" : "Alacak"}
-                        </span>
-                      </td>
-                      <td>{fmtCurrency(m.tutar)}</td>
-                      <td className="muted">{m.aciklama || "-"}</td>
-                      <td className="muted">{trDate(m.tarih)}</td>
-                      <td>
-                        <button
-                          className="icon-btn danger"
-                          onClick={() => removeMovement(m.id)}
-                          aria-label="Sil"
-                          title="Sil"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </td>
-                    </tr>
+                  {movementGroups.map((g) => (
+                    <Fragment key={g.key}>
+                      <tr className="date-divider">
+                        <td colSpan={5}>{g.label}</td>
+                      </tr>
+                      {g.items.map((m) => (
+                        <tr key={m.id} className={editingMoveId === m.id ? "editing-row" : ""}>
+                          <td>
+                            <span className={`status-badge ${m.tur === "borc" ? "status-beklemede" : "status-odendi"}`}>
+                              {m.tur === "borc" ? "Borç" : "Alacak"}
+                            </span>
+                          </td>
+                          <td>{fmtCurrency(m.tutar)}</td>
+                          <td className="muted">{m.aciklama || "-"}</td>
+                          <td className="muted">{trDate(m.tarih)}</td>
+                          <td className="row-actions">
+                            <button
+                              className="icon-btn"
+                              onClick={() => startEditMovement(m)}
+                              aria-label="Düzenle"
+                              title="Düzenle"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              className="icon-btn danger"
+                              onClick={() => removeMovement(m.id)}
+                              aria-label="Sil"
+                              title="Sil"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -265,10 +328,17 @@ export default function CariHesapDashboard() {
           <input id="ca-adres" type="text" value={form.adres} onChange={(e) => setForm((f) => ({ ...f, adres: e.target.value }))} />
         </div>
         {formError && <p className="form-error">{formError}</p>}
-        <button type="submit" className="submit-btn" disabled={submitting}>
-          <Plus size={16} />
-          {submitting ? "Ekleniyor…" : "Cari Ekle"}
-        </button>
+        <div className="form-actions">
+          <button type="submit" className="submit-btn" disabled={submitting}>
+            {editingAccountId ? <Pencil size={16} /> : <Plus size={16} />}
+            {submitting ? "Kaydediliyor…" : editingAccountId ? "Cariyi Güncelle" : "Cari Ekle"}
+          </button>
+          {editingAccountId && (
+            <button type="button" className="icon-btn" onClick={cancelEditAccount}>
+              <X size={16} /> İptal
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="scan-table-wrap">
@@ -298,11 +368,23 @@ export default function CariHesapDashboard() {
                 {filtered.map((a) => {
                   const bal = balanceLabel(a.bakiye);
                   return (
-                    <tr key={a.id} className="clickable-row" onClick={() => setSelectedId(a.id)}>
+                    <tr
+                      key={a.id}
+                      className={`clickable-row ${editingAccountId === a.id ? "editing-row" : ""}`}
+                      onClick={() => setSelectedId(a.id)}
+                    >
                       <td>{a.ad}</td>
                       <td className="muted">{TYPE_LABEL[a.tur] || a.tur}</td>
                       <td className={bal.cls}>{bal.text}</td>
-                      <td>
+                      <td className="row-actions">
+                        <button
+                          className="icon-btn"
+                          onClick={(e) => startEditAccount(a, e)}
+                          aria-label="Düzenle"
+                          title="Düzenle"
+                        >
+                          <Pencil size={15} />
+                        </button>
                         <button
                           className="icon-btn danger"
                           onClick={(e) => {

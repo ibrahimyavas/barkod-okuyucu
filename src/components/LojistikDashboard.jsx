@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
-import { Truck, PackageCheck, Clock, AlertTriangle, Plus, Trash2, Search } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { Truck, PackageCheck, AlertTriangle, Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useCariAccounts } from "../hooks/useCariAccounts.js";
-import { todayISO, trDate, isPastDate } from "../lib/format.js";
+import { todayISO, trDate, isPastDate, groupByDate } from "../lib/format.js";
 
 const EMPTY_FORM = {
   yon: "giden",
@@ -17,7 +17,12 @@ const EMPTY_FORM = {
   notMetni: "",
 };
 
-const DURUM_LABEL = { planlandi: "Planlandı", yolda: "Yolda", teslim_edildi: "Teslim Edildi", iptal: "İptal" };
+const DURUM_OPTIONS = [
+  { value: "planlandi", label: "Planlandı" },
+  { value: "yolda", label: "Yolda" },
+  { value: "teslim_edildi", label: "Teslim Edildi" },
+  { value: "iptal", label: "İptal" },
+];
 const DURUM_BADGE_CLASS = {
   planlandi: "status-beklemede",
   yolda: "status-kismi",
@@ -29,11 +34,27 @@ function isGecikti(s) {
   return (s.durum === "planlandi" || s.durum === "yolda") && isPastDate(s.planlananTarih);
 }
 
+function toFormShape(s) {
+  return {
+    yon: s.yon || "giden",
+    cariId: s.cariId || "",
+    tarafAdi: s.tarafAdi || "",
+    aracPlakasi: s.aracPlakasi || "",
+    surucu: s.surucu || "",
+    cikisKonumu: s.cikisKonumu || "",
+    varisKonumu: s.varisKonumu || "",
+    planlananTarih: s.planlananTarih || todayISO(),
+    durum: s.durum || "planlandi",
+    notMetni: s.notMetni || "",
+  };
+}
+
 export default function LojistikDashboard() {
   const { sevkiyatlar, loading, error, addSevkiyat, updateOne, removeSevkiyat } = useSevkiyatlar();
   const { accounts } = useCariAccounts();
 
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [query, setQuery] = useState("");
@@ -53,12 +74,26 @@ export default function LojistikDashboard() {
     return sevkiyatlar.filter((s) => [s.tarafAdi, s.aracPlakasi, s.surucu].some((v) => v?.toLowerCase().includes(q)));
   }, [sevkiyatlar, query]);
 
+  const groups = useMemo(() => groupByDate(filtered, (s) => s.planlananTarih), [filtered]);
+
   const stats = useMemo(() => {
     const yolda = sevkiyatlar.filter((s) => s.durum === "yolda").length;
     const bugunPlanlanan = sevkiyatlar.filter((s) => s.durum !== "iptal" && s.planlananTarih === todayISO()).length;
     const geciken = sevkiyatlar.filter(isGecikti).length;
     return { yolda, bugunPlanlanan, geciken };
   }, [sevkiyatlar]);
+
+  function startEdit(s) {
+    setEditingId(s.id);
+    setForm(toFormShape(s));
+    setSubmitError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM, planlananTarih: form.planlananTarih });
+    setSubmitError(null);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -70,7 +105,12 @@ export default function LojistikDashboard() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await addSevkiyat({ ...form, tarafAdi });
+      if (editingId) {
+        await updateOne(editingId, { ...form, tarafAdi });
+        setEditingId(null);
+      } else {
+        await addSevkiyat({ ...form, tarafAdi });
+      }
       setForm({ ...EMPTY_FORM, planlananTarih: form.planlananTarih });
     } catch (err) {
       setSubmitError(err.message);
@@ -170,10 +210,11 @@ export default function LojistikDashboard() {
         <div className="field">
           <label htmlFor="lj-durum">Durum</label>
           <select id="lj-durum" value={form.durum} onChange={(e) => updateField("durum", e.target.value)}>
-            <option value="planlandi">Planlandı</option>
-            <option value="yolda">Yolda</option>
-            <option value="teslim_edildi">Teslim Edildi</option>
-            <option value="iptal">İptal</option>
+            {DURUM_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -184,10 +225,17 @@ export default function LojistikDashboard() {
 
         {submitError && <p className="form-error">{submitError}</p>}
 
-        <button type="submit" className="submit-btn" disabled={submitting}>
-          <Plus size={16} />
-          {submitting ? "Ekleniyor…" : "Sevkiyat Ekle"}
-        </button>
+        <div className="form-actions">
+          <button type="submit" className="submit-btn" disabled={submitting}>
+            {editingId ? <Pencil size={16} /> : <Plus size={16} />}
+            {submitting ? "Kaydediliyor…" : editingId ? "Güncelle" : "Sevkiyat Ekle"}
+          </button>
+          {editingId && (
+            <button type="button" className="icon-btn" onClick={cancelEdit}>
+              <X size={16} /> İptal
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="scan-table-wrap">
@@ -222,39 +270,60 @@ export default function LojistikDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((s) => (
-                  <tr key={s.id}>
-                    <td className="muted">{s.yon === "giden" ? "Giden" : "Gelen"}</td>
-                    <td>{s.tarafAdi}</td>
-                    <td className="muted">
-                      {s.aracPlakasi || "-"}
-                      {s.surucu ? ` · ${s.surucu}` : ""}
-                    </td>
-                    <td className="muted">{trDate(s.planlananTarih)}</td>
-                    <td className="muted">{trDate(s.gerceklesenTarih)}</td>
-                    <td>
-                      <select
-                        className={`status-badge ${DURUM_BADGE_CLASS[s.durum]}`}
-                        value={s.durum}
-                        onChange={(e) => updateOne(s.id, { durum: e.target.value })}
-                      >
-                        <option value="planlandi">Planlandı</option>
-                        <option value="yolda">Yolda</option>
-                        <option value="teslim_edildi">Teslim Edildi</option>
-                        <option value="iptal">İptal</option>
-                      </select>
-                      {isGecikti(s) && (
-                        <span className="status-badge status-gecikti" title="Planlanan tarih geçti">
-                          Gecikti
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <button className="icon-btn danger" onClick={() => removeSevkiyat(s.id)} aria-label="Sil" title="Sil">
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
+                {groups.map((g) => (
+                  <Fragment key={g.key}>
+                    <tr className="date-divider">
+                      <td colSpan={7}>{g.label}</td>
+                    </tr>
+                    {g.items.map((s) => (
+                      <tr key={s.id} className={editingId === s.id ? "editing-row" : ""}>
+                        <td className="muted">{s.yon === "giden" ? "Giden" : "Gelen"}</td>
+                        <td>{s.tarafAdi}</td>
+                        <td className="muted">
+                          {s.aracPlakasi || "-"}
+                          {s.surucu ? ` · ${s.surucu}` : ""}
+                        </td>
+                        <td className="muted">{trDate(s.planlananTarih)}</td>
+                        <td className="muted">{trDate(s.gerceklesenTarih)}</td>
+                        <td>
+                          <select
+                            className={`status-badge ${DURUM_BADGE_CLASS[s.durum]}`}
+                            value={s.durum}
+                            onChange={(e) => updateOne(s.id, { durum: e.target.value })}
+                          >
+                            {DURUM_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                          {isGecikti(s) && (
+                            <span className="status-badge status-gecikti" title="Planlanan tarih geçti">
+                              Gecikti
+                            </span>
+                          )}
+                        </td>
+                        <td className="row-actions">
+                          <button
+                            className="icon-btn"
+                            onClick={() => startEdit(s)}
+                            aria-label="Düzenle"
+                            title="Düzenle"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="icon-btn danger"
+                            onClick={() => removeSevkiyat(s.id)}
+                            aria-label="Sil"
+                            title="Sil"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

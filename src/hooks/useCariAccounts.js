@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchCariAccounts, createCariAccount, deleteCariAccount } from "../lib/api.js";
+import { fetchCariAccounts, createCariAccount, updateCariAccount, deleteCariAccount } from "../lib/api.js";
 
 // Balances come back computed from the movements table (see worker/cari.js)
 // on every fetch - there's no stored balance to drift out of sync.
@@ -33,6 +33,14 @@ export function useCariAccounts() {
     [reload]
   );
 
+  const editAccount = useCallback(
+    async (id, fields) => {
+      await updateCariAccount(id, fields);
+      await reload();
+    },
+    [reload]
+  );
+
   const removeAccount = useCallback(
     async (id) => {
       const prev = accounts;
@@ -47,5 +55,5 @@ export function useCariAccounts() {
     [accounts]
   );
 
-  return { accounts, loading, error, addAccount, removeAccount, reload };
+  return { accounts, loading, error, addAccount, editAccount, removeAccount, reload };
 }

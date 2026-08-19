@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, Wallet, Plus, Trash2, RefreshCw, Search, ScanBarcode } from "lucide-react";
+import { Boxes, Wallet, Plus, Pencil, Trash2, X, RefreshCw, Search, ScanBarcode } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import { stockStatus } from "../lib/stock.js";
@@ -17,9 +17,24 @@ const EMPTY_FORM = {
   minStok: "",
 };
 
+function toFormShape(p) {
+  return {
+    barkod: p.barkod || "",
+    urunAdi: p.urunAdi || "",
+    kategori: p.kategori || "",
+    depoKonumu: p.depoKonumu || "",
+    alinisTarihi: p.alinisTarihi || todayISO(),
+    maliyet: p.maliyet ?? "",
+    birim: p.birim || "",
+    miktar: p.miktar ?? "",
+    minStok: p.minStok ?? "",
+  };
+}
+
 export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill }) {
-  const { products, loading, error, addProduct, removeProduct, updateProduct } = useProducts();
+  const { products, loading, error, addProduct, updateProduct, removeProduct } = useProducts();
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [query, setQuery] = useState("");
@@ -54,6 +69,18 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  function startEdit(p) {
+    setEditingId(p.id);
+    setForm(toFormShape(p));
+    setSubmitError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM, alinisTarihi: form.alinisTarihi });
+    setSubmitError(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const urunAdi = form.urunAdi.trim();
@@ -63,19 +90,26 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
     }
     setSubmitting(true);
     setSubmitError(null);
+    const fields = {
+      barkod: form.barkod.trim(),
+      urunAdi,
+      kategori: form.kategori.trim(),
+      depoKonumu: form.depoKonumu.trim(),
+      alinisTarihi: form.alinisTarihi,
+      maliyet: form.maliyet === "" ? null : Number(form.maliyet),
+      birim: form.birim.trim(),
+      miktar: form.miktar === "" ? null : Number(form.miktar),
+      minStok: form.minStok === "" ? null : Number(form.minStok),
+    };
     try {
-      await addProduct({
-        barkod: form.barkod.trim(),
-        urunAdi,
-        kategori: form.kategori.trim(),
-        depoKonumu: form.depoKonumu.trim(),
-        alinisTarihi: form.alinisTarihi,
-        maliyet: form.maliyet === "" ? null : Number(form.maliyet),
-        birim: form.birim.trim(),
-        miktar: form.miktar === "" ? null : Number(form.miktar),
-        minStok: form.minStok === "" ? null : Number(form.minStok),
-      });
-      setForm({ ...EMPTY_FORM, alinisTarihi: form.alinisTarihi });
+      if (editingId) {
+        await updateProduct(editingId, fields);
+        setEditingId(null);
+        setForm({ ...EMPTY_FORM, alinisTarihi: form.alinisTarihi });
+      } else {
+        await addProduct(fields);
+        setForm({ ...EMPTY_FORM, alinisTarihi: form.alinisTarihi });
+      }
     } catch (err) {
       setSubmitError(err.message);
     } finally {
@@ -215,10 +249,17 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
 
         {submitError && <p className="form-error">{submitError}</p>}
 
-        <button type="submit" className="submit-btn" disabled={submitting}>
-          <Plus size={16} />
-          {submitting ? "Ekleniyor…" : "Ürün Ekle"}
-        </button>
+        <div className="form-actions">
+          <button type="submit" className="submit-btn" disabled={submitting}>
+            {editingId ? <Pencil size={16} /> : <Plus size={16} />}
+            {submitting ? "Kaydediliyor…" : editingId ? "Güncelle" : "Ürün Ekle"}
+          </button>
+          {editingId && (
+            <button type="button" className="icon-btn" onClick={cancelEdit}>
+              <X size={16} /> İptal
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="scan-table-wrap">
@@ -263,7 +304,7 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
                 {filtered.map((p) => {
                   const status = stockStatus(p.miktar, p.minStok);
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.id} className={editingId === p.id ? "editing-row" : ""}>
                       <td>{p.urunAdi}</td>
                       <td className="code-cell">{p.barkod || "-"}</td>
                       <td className="muted">{p.kategori || "-"}</td>
@@ -278,7 +319,10 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
                         <StockAdjuster value={p.minStok} onSave={(v) => updateProduct(p.id, { minStok: v })} />
                       </td>
                       <td className={status.cls}>{status.label}</td>
-                      <td>
+                      <td className="row-actions">
+                        <button className="icon-btn" onClick={() => startEdit(p)} aria-label="Düzenle" title="Düzenle">
+                          <Pencil size={15} />
+                        </button>
                         <button
                           className="icon-btn danger"
                           onClick={() => removeProduct(p.id)}

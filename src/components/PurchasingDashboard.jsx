@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
-import { Wallet, Clock, Users, Plus, Trash2, Search, ChevronDown } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { Wallet, Clock, Users, Plus, Pencil, Trash2, X, Search, ChevronDown } from "lucide-react";
 import { useSuppliers } from "../hooks/useSuppliers.js";
 import { usePurchases } from "../hooks/usePurchases.js";
-import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
+import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
 
 const EMPTY_PURCHASE = {
   supplierId: "",
@@ -22,16 +22,34 @@ const EMPTY_SUPPLIER = { ad: "", yetkili: "", telefon: "", adres: "" };
 const STATUS_LABEL = { beklemede: "Beklemede", kismi: "Kısmi", odendi: "Ödendi" };
 const STATUS_NEXT = { beklemede: "kismi", kismi: "odendi", odendi: "beklemede" };
 
+function purchaseToFormShape(p) {
+  return {
+    supplierId: p.supplierId || "",
+    urunAdi: p.urunAdi || "",
+    barkod: p.barkod || "",
+    miktar: p.miktar ?? "",
+    birim: p.birim || "",
+    birimFiyat: p.birimFiyat ?? "",
+    toplamTutar: p.toplamTutar ?? "",
+    odemeDurumu: p.odemeDurumu || "beklemede",
+    tarih: p.tarih || todayISO(),
+    notMetni: p.notMetni || "",
+    toplamTutarTouched: true, // don't fight the user's/loaded values with auto-calc on first edit
+  };
+}
+
 export default function PurchasingDashboard() {
-  const { suppliers, addSupplier, removeSupplier } = useSuppliers();
-  const { purchases, loading, error, addPurchase, cycleStatus, removePurchase } = usePurchases();
+  const { suppliers, addSupplier, editSupplier, removeSupplier } = useSuppliers();
+  const { purchases, loading, error, addPurchase, cycleStatus, editPurchase, removePurchase } = usePurchases();
 
   const [supplierPanelOpen, setSupplierPanelOpen] = useState(false);
   const [supplierForm, setSupplierForm] = useState(EMPTY_SUPPLIER);
+  const [editingSupplierId, setEditingSupplierId] = useState(null);
   const [supplierError, setSupplierError] = useState(null);
   const [supplierSubmitting, setSupplierSubmitting] = useState(false);
 
   const [form, setForm] = useState(EMPTY_PURCHASE);
+  const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [query, setQuery] = useState("");
@@ -45,6 +63,8 @@ export default function PurchasingDashboard() {
       [p.urunAdi, p.barkod, p.tedarikciAdi].some((v) => v?.toLowerCase().includes(q))
     );
   }, [purchases, query]);
+
+  const groups = useMemo(() => groupByDate(filtered, (p) => p.tarih), [filtered]);
 
   const stats = useMemo(() => {
     let total = 0;
@@ -73,6 +93,18 @@ export default function PurchasingDashboard() {
     });
   }
 
+  function startEditSupplier(s) {
+    setEditingSupplierId(s.id);
+    setSupplierForm({ ad: s.ad || "", yetkili: s.yetkili || "", telefon: s.telefon || "", adres: s.adres || "" });
+    setSupplierError(null);
+  }
+
+  function cancelEditSupplier() {
+    setEditingSupplierId(null);
+    setSupplierForm(EMPTY_SUPPLIER);
+    setSupplierError(null);
+  }
+
   async function handleSupplierSubmit(e) {
     e.preventDefault();
     const ad = supplierForm.ad.trim();
@@ -83,14 +115,32 @@ export default function PurchasingDashboard() {
     setSupplierSubmitting(true);
     setSupplierError(null);
     try {
-      const id = await addSupplier({ ...supplierForm, ad });
-      setSupplierForm(EMPTY_SUPPLIER);
-      setForm((f) => ({ ...f, supplierId: id }));
+      if (editingSupplierId) {
+        await editSupplier(editingSupplierId, { ...supplierForm, ad });
+        setEditingSupplierId(null);
+        setSupplierForm(EMPTY_SUPPLIER);
+      } else {
+        const id = await addSupplier({ ...supplierForm, ad });
+        setSupplierForm(EMPTY_SUPPLIER);
+        setForm((f) => ({ ...f, supplierId: id }));
+      }
     } catch (err) {
       setSupplierError(err.message);
     } finally {
       setSupplierSubmitting(false);
     }
+  }
+
+  function startEdit(p) {
+    setEditingId(p.id);
+    setForm(purchaseToFormShape(p));
+    setSubmitError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...EMPTY_PURCHASE, supplierId: form.supplierId, tarih: form.tarih });
+    setSubmitError(null);
   }
 
   async function handlePurchaseSubmit(e) {
@@ -102,22 +152,29 @@ export default function PurchasingDashboard() {
     }
     setSubmitting(true);
     setSubmitError(null);
+    const supplier = supplierById.get(form.supplierId);
+    const fields = {
+      supplierId: form.supplierId || null,
+      tedarikciAdi: supplier?.ad || "",
+      urunAdi,
+      barkod: form.barkod.trim(),
+      miktar: form.miktar === "" ? null : Number(form.miktar),
+      birim: form.birim.trim(),
+      birimFiyat: form.birimFiyat === "" ? null : Number(form.birimFiyat),
+      toplamTutar: form.toplamTutar === "" ? null : Number(form.toplamTutar),
+      odemeDurumu: form.odemeDurumu,
+      tarih: form.tarih,
+      notMetni: form.notMetni.trim(),
+    };
     try {
-      const supplier = supplierById.get(form.supplierId);
-      await addPurchase({
-        supplierId: form.supplierId || null,
-        tedarikciAdi: supplier?.ad || "",
-        urunAdi,
-        barkod: form.barkod.trim(),
-        miktar: form.miktar === "" ? null : Number(form.miktar),
-        birim: form.birim.trim(),
-        birimFiyat: form.birimFiyat === "" ? null : Number(form.birimFiyat),
-        toplamTutar: form.toplamTutar === "" ? null : Number(form.toplamTutar),
-        odemeDurumu: form.odemeDurumu,
-        tarih: form.tarih,
-        notMetni: form.notMetni.trim(),
-      });
-      setForm({ ...EMPTY_PURCHASE, supplierId: form.supplierId, tarih: form.tarih });
+      if (editingId) {
+        await editPurchase(editingId, fields);
+        setEditingId(null);
+        setForm({ ...EMPTY_PURCHASE, supplierId: form.supplierId, tarih: form.tarih });
+      } else {
+        await addPurchase(fields);
+        setForm({ ...EMPTY_PURCHASE, supplierId: form.supplierId, tarih: form.tarih });
+      }
     } catch (err) {
       setSubmitError(err.message);
     } finally {
@@ -174,14 +231,24 @@ export default function PurchasingDashboard() {
                       {s.yetkili ? ` · ${s.yetkili}` : ""}
                       {s.telefon ? ` · ${s.telefon}` : ""}
                     </span>
-                    <button
-                      className="icon-btn danger"
-                      onClick={() => removeSupplier(s.id)}
-                      aria-label="Tedarikçiyi sil"
-                      title="Tedarikçiyi sil"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <span className="row-actions">
+                      <button
+                        className="icon-btn"
+                        onClick={() => startEditSupplier(s)}
+                        aria-label="Tedarikçiyi düzenle"
+                        title="Tedarikçiyi düzenle"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        className="icon-btn danger"
+                        onClick={() => removeSupplier(s.id)}
+                        aria-label="Tedarikçiyi sil"
+                        title="Tedarikçiyi sil"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -225,10 +292,17 @@ export default function PurchasingDashboard() {
                 />
               </div>
               {supplierError && <p className="form-error">{supplierError}</p>}
-              <button type="submit" className="submit-btn" disabled={supplierSubmitting}>
-                <Plus size={16} />
-                {supplierSubmitting ? "Ekleniyor…" : "Tedarikçi Ekle"}
-              </button>
+              <div className="form-actions">
+                <button type="submit" className="submit-btn" disabled={supplierSubmitting}>
+                  {editingSupplierId ? <Pencil size={16} /> : <Plus size={16} />}
+                  {supplierSubmitting ? "Kaydediliyor…" : editingSupplierId ? "Tedarikçiyi Güncelle" : "Tedarikçi Ekle"}
+                </button>
+                {editingSupplierId && (
+                  <button type="button" className="icon-btn" onClick={cancelEditSupplier}>
+                    <X size={16} /> İptal
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         )}
@@ -335,10 +409,17 @@ export default function PurchasingDashboard() {
 
         {submitError && <p className="form-error">{submitError}</p>}
 
-        <button type="submit" className="submit-btn" disabled={submitting}>
-          <Plus size={16} />
-          {submitting ? "Ekleniyor…" : "Satın Alma Ekle"}
-        </button>
+        <div className="form-actions">
+          <button type="submit" className="submit-btn" disabled={submitting}>
+            {editingId ? <Pencil size={16} /> : <Plus size={16} />}
+            {submitting ? "Kaydediliyor…" : editingId ? "Güncelle" : "Satın Alma Ekle"}
+          </button>
+          {editingId && (
+            <button type="button" className="icon-btn" onClick={cancelEdit}>
+              <X size={16} /> İptal
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="scan-table-wrap">
@@ -375,33 +456,43 @@ export default function PurchasingDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.urunAdi}</td>
-                    <td className="muted">{p.tedarikciAdi || "-"}</td>
-                    <td className="muted">{p.miktar != null ? `${p.miktar} ${p.birim || ""}`.trim() : "-"}</td>
-                    <td>{fmtCurrency(p.toplamTutar)}</td>
-                    <td>
-                      <button
-                        className={`status-badge status-${p.odemeDurumu}`}
-                        onClick={() => cycleStatus(p.id, STATUS_NEXT[p.odemeDurumu] || "beklemede")}
-                        title="Durumu değiştirmek için tıklayın"
-                      >
-                        {STATUS_LABEL[p.odemeDurumu] || p.odemeDurumu}
-                      </button>
-                    </td>
-                    <td className="muted">{trDate(p.tarih)}</td>
-                    <td>
-                      <button
-                        className="icon-btn danger"
-                        onClick={() => removePurchase(p.id)}
-                        aria-label="Sil"
-                        title="Sil"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
+                {groups.map((g) => (
+                  <Fragment key={g.key}>
+                    <tr className="date-divider">
+                      <td colSpan={7}>{g.label}</td>
+                    </tr>
+                    {g.items.map((p) => (
+                      <tr key={p.id} className={editingId === p.id ? "editing-row" : ""}>
+                        <td>{p.urunAdi}</td>
+                        <td className="muted">{p.tedarikciAdi || "-"}</td>
+                        <td className="muted">{p.miktar != null ? `${p.miktar} ${p.birim || ""}`.trim() : "-"}</td>
+                        <td>{fmtCurrency(p.toplamTutar)}</td>
+                        <td>
+                          <button
+                            className={`status-badge status-${p.odemeDurumu}`}
+                            onClick={() => cycleStatus(p.id, STATUS_NEXT[p.odemeDurumu] || "beklemede")}
+                            title="Durumu değiştirmek için tıklayın"
+                          >
+                            {STATUS_LABEL[p.odemeDurumu] || p.odemeDurumu}
+                          </button>
+                        </td>
+                        <td className="muted">{trDate(p.tarih)}</td>
+                        <td className="row-actions">
+                          <button className="icon-btn" onClick={() => startEdit(p)} aria-label="Düzenle" title="Düzenle">
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="icon-btn danger"
+                            onClick={() => removePurchase(p.id)}
+                            aria-label="Sil"
+                            title="Sil"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
