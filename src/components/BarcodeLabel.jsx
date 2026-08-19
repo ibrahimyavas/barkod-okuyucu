@@ -16,6 +16,18 @@ const JSBARCODE_FORMAT = {
   codabar: "CODABAR",
 };
 
+// QR'ın basılacağı fiziksel boyut - yalnızca format === "qr_code" için
+// anlamlı. `px` canvas çözünürlüğü (büyük boyutta daha yoğun/çok satırlı
+// güzergah QR'ları bile net kalsın diye), `mm` ise yazdırma sırasında
+// .label-card'ın gerçek fiziksel kare boyutu (bkz. index.css @media print).
+export const QR_SIZE_OPTIONS = [
+  { value: "kucuk", label: "Küçük (25mm)", mm: 25, px: 80 },
+  { value: "orta", label: "Orta (40mm)", mm: 40, px: 120 },
+  { value: "buyuk", label: "Büyük (60mm)", mm: 60, px: 170 },
+];
+const QR_SIZE_BY_VALUE = Object.fromEntries(QR_SIZE_OPTIONS.map((o) => [o.value, o]));
+const DEFAULT_QR_SIZE = "orta";
+
 // Renders one printable label: barcode/QR + optional product name + price.
 // Used both for the live preview while filling out the form and, many times
 // over, inside the print sheet.
@@ -24,10 +36,11 @@ const JSBARCODE_FORMAT = {
 // the QR instead of the plain `barkod` - see lib/qrPayload.js. `nereden`/
 // `nereye` are shown as visible text on the label too, so a human glancing
 // at it sees the route without needing to scan anything.
-export default function BarcodeLabel({ barkod, urunAdi, fiyat, format, qrPayload, nereden, nereye }) {
+export default function BarcodeLabel({ barkod, urunAdi, fiyat, format, qrPayload, nereden, nereye, boyut }) {
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
   const [error, setError] = useState(null);
+  const qrSize = QR_SIZE_BY_VALUE[boyut] || QR_SIZE_BY_VALUE[DEFAULT_QR_SIZE];
 
   useEffect(() => {
     setError(null);
@@ -35,7 +48,7 @@ export default function BarcodeLabel({ barkod, urunAdi, fiyat, format, qrPayload
 
     if (format === "qr_code") {
       if (!canvasRef.current) return;
-      QRCode.toCanvas(canvasRef.current, qrPayload || barkod, { margin: 1, width: 90 }).catch((err) =>
+      QRCode.toCanvas(canvasRef.current, qrPayload || barkod, { margin: 1, width: qrSize.px }).catch((err) =>
         setError(err?.message || "QR kod üretilemedi.")
       );
       return;
@@ -56,10 +69,13 @@ export default function BarcodeLabel({ barkod, urunAdi, fiyat, format, qrPayload
       // chosen symbology (e.g. a 9-digit code picked as EAN-13).
       setError(err?.message || "Bu kod bu formatla üretilemedi.");
     }
-  }, [barkod, format, qrPayload]);
+  }, [barkod, format, qrPayload, qrSize.px]);
+
+  const printStyle =
+    format === "qr_code" ? { "--print-w": `${qrSize.mm}mm`, "--print-h": `${qrSize.mm}mm` } : undefined;
 
   return (
-    <div className="label-card">
+    <div className="label-card" style={printStyle}>
       {urunAdi && <div className="label-title">{urunAdi}</div>}
       {error ? (
         <div className="label-error">{error}</div>

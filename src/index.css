@@ -1182,6 +1182,53 @@ select.status-badge {
   display: flex;
 }
 
+/* ---- modal (bkz. Modal.jsx) ------------------------------------------ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
 .scan-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -1329,8 +1376,11 @@ select.status-badge {
     width: 100%;
   }
   .label-card {
-    width: 60mm;
-    height: 35mm;
+    /* QR etiketleri kendi seçilen boyutunu (bkz. BarcodeLabel.jsx --print-w/-h,
+       LabelPrintDashboard'daki boyut seçici) kullanır; barkod etiketleri
+       sabit 60x35mm'de kalır. */
+    width: var(--print-w, 60mm);
+    height: var(--print-h, 35mm);
     border: 1px solid #000;
     break-inside: avoid;
   }

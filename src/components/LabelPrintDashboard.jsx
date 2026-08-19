@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Plus, Trash2, Printer, Tag } from "lucide-react";
+import { Plus, Trash2, Printer, Tag, Eye } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useLabelQueue } from "../hooks/useLabelQueue.js";
 import { buildRoutePayload } from "../lib/qrPayload.js";
-import BarcodeLabel from "./BarcodeLabel.jsx";
+import BarcodeLabel, { QR_SIZE_OPTIONS } from "./BarcodeLabel.jsx";
+import Modal from "./Modal.jsx";
 
 const FORMAT_OPTIONS = [
   { value: "code_128", label: "Code 128 (genel amaçlı, önerilen)" },
@@ -18,7 +19,7 @@ const FORMAT_OPTIONS = [
   { value: "qr_code", label: "QR Kod" },
 ];
 
-const EMPTY_FORM = { barkod: "", urunAdi: "", fiyat: "", format: "code_128", nereden: "", nereye: "" };
+const EMPTY_FORM = { barkod: "", urunAdi: "", fiyat: "", format: "code_128", nereden: "", nereye: "", boyut: "orta" };
 
 export default function LabelPrintDashboard() {
   const { products } = useProducts();
@@ -27,6 +28,10 @@ export default function LabelPrintDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSevkiyatId, setSelectedSevkiyatId] = useState("");
+  // Kuyruktaki bir etiketi büyük önizlemede görmek/tek başına yazdırmak için
+  // - bkz. Modal.jsx. Doluyken yazdırma alanı SADECE bu etiketi içeriyor
+  // (aşağıdaki printAreaEntries), kuyruğun geri kalanı etkilenmiyor.
+  const [previewItem, setPreviewItem] = useState(null);
 
   const isQr = form.format === "qr_code";
 
@@ -75,6 +80,7 @@ export default function LabelPrintDashboard() {
       urunAdi,
       fiyat: form.fiyat === "" ? null : Number(form.fiyat),
       format: form.format,
+      boyut: isQr ? form.boyut : undefined,
       nereden: hasRoute ? nereden : "",
       nereye: hasRoute ? nereye : "",
       qrPayload: hasRoute ? buildRoutePayload({ urunAdi, barkod, nereden, nereye }) : null,
@@ -151,6 +157,17 @@ export default function LabelPrintDashboard() {
 
         {isQr && (
           <>
+            <div className="field">
+              <label htmlFor="lb-boyut">QR Boyutu</label>
+              <select id="lb-boyut" value={form.boyut} onChange={(e) => updateField("boyut", e.target.value)}>
+                {QR_SIZE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="field field-wide">
               <label htmlFor="lb-sevkiyat-sec">Sevkiyattan güzergah doldur (opsiyonel)</label>
               <select id="lb-sevkiyat-sec" value={selectedSevkiyatId} onChange={(e) => pickSevkiyat(e.target.value)}>
@@ -183,6 +200,7 @@ export default function LabelPrintDashboard() {
               urunAdi={form.urunAdi}
               fiyat={form.fiyat === "" ? null : Number(form.fiyat)}
               format={form.format}
+              boyut={isQr ? form.boyut : undefined}
               nereden={isQr ? form.nereden : ""}
               nereye={isQr ? form.nereye : ""}
               qrPayload={
@@ -235,7 +253,15 @@ export default function LabelPrintDashboard() {
                           onChange={(e) => updateCount(it.id, Number(e.target.value) || 1)}
                         />
                       </td>
-                      <td>
+                      <td className="row-actions">
+                        <button
+                          className="icon-btn"
+                          onClick={() => setPreviewItem(it)}
+                          aria-label="Görüntüle ve yazdır"
+                          title="Görüntüle ve yazdır"
+                        >
+                          <Eye size={15} />
+                        </button>
                         <button className="icon-btn danger" onClick={() => removeItem(it.id)} aria-label="Sil" title="Sil">
                           <Trash2 size={15} />
                         </button>
@@ -264,9 +290,11 @@ export default function LabelPrintDashboard() {
         )}
       </div>
 
-      {/* Ekranda gizli - sadece yazdırma sırasında görünür (bkz. index.css @media print). */}
+      {/* Ekranda gizli - sadece yazdırma sırasında görünür (bkz. index.css
+          @media print). previewItem doluyken (bkz. Modal) yalnızca O
+          etiketi içerir - kuyruğun geri kalanı yanlışlıkla yazdırılmaz. */}
       <div className="print-area">
-        {items.flatMap((it) =>
+        {(previewItem ? [previewItem] : items).flatMap((it) =>
           Array.from({ length: it.adet }, (_, i) => (
             <BarcodeLabel
               key={`${it.id}-${i}`}
@@ -274,6 +302,7 @@ export default function LabelPrintDashboard() {
               urunAdi={it.urunAdi}
               fiyat={it.fiyat}
               format={it.format}
+              boyut={it.boyut}
               qrPayload={it.qrPayload}
               nereden={it.nereden}
               nereye={it.nereye}
@@ -281,6 +310,31 @@ export default function LabelPrintDashboard() {
           ))
         )}
       </div>
+
+      {previewItem && (
+        <Modal title={previewItem.urunAdi || previewItem.barkod} onClose={() => setPreviewItem(null)}>
+          <BarcodeLabel
+            barkod={previewItem.barkod}
+            urunAdi={previewItem.urunAdi}
+            fiyat={previewItem.fiyat}
+            format={previewItem.format}
+            boyut={previewItem.boyut}
+            qrPayload={previewItem.qrPayload}
+            nereden={previewItem.nereden}
+            nereye={previewItem.nereye}
+          />
+          <p className="dashboard-hint">
+            {previewItem.adet} adet yazdırılacak
+            {previewItem.format === "qr_code"
+              ? ` · ${QR_SIZE_OPTIONS.find((o) => o.value === previewItem.boyut)?.label || QR_SIZE_OPTIONS[1].label}`
+              : ""}
+          </p>
+          <button type="button" className="submit-btn" onClick={() => window.print()}>
+            <Printer size={16} />
+            Bu Etiketi Yazdır
+          </button>
+        </Modal>
+      )}
     </div>
   );
 }
