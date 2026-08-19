@@ -3,6 +3,7 @@ import { AlertTriangle, PackageX, Search } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
 import { stockStatus, isLowStock } from "../lib/stock.js";
 import StockAdjuster from "./StockAdjuster.jsx";
+import LowStockAlert from "./LowStockAlert.jsx";
 
 export default function LowStockDashboard() {
   const { products, loading, error, updateProduct } = useProducts();
@@ -28,6 +29,8 @@ export default function LowStockDashboard() {
 
   return (
     <div className="dashboard">
+      <LowStockAlert items={lowStock} criticalCount={stats.kritik} outOfStockCount={stats.tukendi} />
+
       <div className="stat-cards">
         <div className="stat-card">
           <AlertTriangle size={18} />

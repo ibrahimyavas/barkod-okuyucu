@@ -406,6 +406,76 @@ body {
   gap: 14px;
 }
 
+/* Düşük Stok dashboard'unun üst uyarı şeridi - bkz. LowStockAlert.jsx */
+.low-stock-alert {
+  border-radius: var(--radius);
+  border: 1px solid var(--danger);
+  background: var(--panel); /* color-mix desteklemeyen eski tarayıcılar için düz geri dönüş */
+  background: color-mix(in srgb, var(--danger) 12%, var(--panel));
+  overflow: hidden;
+}
+
+.low-stock-alert-warning {
+  border-color: var(--warning);
+  background: var(--panel);
+  background: color-mix(in srgb, var(--warning) 12%, var(--panel));
+}
+
+.low-stock-alert-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--danger-text);
+  text-align: left;
+}
+
+.low-stock-alert-warning .low-stock-alert-header {
+  color: var(--warning-text);
+}
+
+.low-stock-alert-headline {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.low-stock-alert-items {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.low-stock-alert-items li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.low-stock-alert-item-name {
+  font-weight: 500;
+}
+
+.low-stock-alert-item-qty {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.low-stock-alert-more {
+  color: var(--text-muted) !important;
+  font-style: italic;
+}
+
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
