@@ -1178,6 +1178,10 @@ select.status-badge {
   line-height: 1.5;
 }
 
+.qr-scan-toggle-row {
+  display: flex;
+}
+
 .scan-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);

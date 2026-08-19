@@ -1,10 +1,18 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { Truck, PackageCheck, AlertTriangle, Plus, Pencil, Trash2, X, Search, ScanBarcode } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Truck, PackageCheck, AlertTriangle, Plus, Pencil, Trash2, X, Search, ScanBarcode, QrCode } from "lucide-react";
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useCariAccounts } from "../hooks/useCariAccounts.js";
+import { useCameraScanner } from "../hooks/useCameraScanner.js";
+import { QR_ONLY_FORMATS, resolveQrOnlyDetector } from "../lib/barcodeDetector.js";
+import { parseRoutePayload } from "../lib/qrPayload.js";
 import { todayISO, trDate, isPastDate, groupByDate } from "../lib/format.js";
 import { findCatalogEntry } from "../lib/catalog.js";
 import DatePicker from "./DatePicker.jsx";
+import CameraPanel from "./CameraPanel.jsx";
+
+// Etiket Bas'ta bastığımız güzergah QR'ları (bkz. lib/qrPayload.js) burada
+// tekrar okunuyor - kırpma bölgesi ScannerView'daki QR moduyla aynı.
+const QR_CROP_REGION = { widthPct: 0.8, heightPct: 0.8 };
 
 const EMPTY_FORM = {
   yon: "giden",
@@ -64,6 +72,34 @@ export default function LojistikDashboard({ catalog = [] }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [query, setQuery] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [lastHit, setLastHit] = useState(null);
+
+  // Etiket Bas'ta bastığımız güzergah QR'ını okutunca formu tek seferde
+  // doldurur: barkod/ürün adı + nereden/nereye -> çıkış/varış konumu.
+  // Bizim formatımıza uymayan bir kod okunursa (parseRoutePayload null
+  // döner) ham değeri düz barkod gibi ele alıyoruz - yukarıdaki katalog
+  // eşleşmesi zaten ürün adını doldurur. Kamera açık kalıyor (otomatik
+  // kapanmıyor) - kullanıcı "Kapat"a basana kadar art arda tarayabilir.
+  const handleQrDetect = useCallback((code) => {
+    const parsed = parseRoutePayload(code);
+    setForm((f) => ({
+      ...f,
+      barkod: parsed?.barkod || code,
+      urunAdi: parsed?.urunAdi || f.urunAdi,
+      cikisKonumu: parsed?.nereden || f.cikisKonumu,
+      varisKonumu: parsed?.nereye || f.varisKonumu,
+    }));
+    setLastHit({ code, ts: Date.now() });
+  }, []);
+
+  const camera = useCameraScanner({
+    enabled: scannerOpen,
+    formats: QR_ONLY_FORMATS,
+    resolveDetector: resolveQrOnlyDetector,
+    cropRegion: QR_CROP_REGION,
+    onDetect: handleQrDetect,
+  });
 
   function pickCari(id) {
     const acc = accounts.find((a) => a.id === id);
@@ -162,6 +198,27 @@ export default function LojistikDashboard({ catalog = [] }) {
           </div>
         </div>
       </div>
+
+      <div className="qr-scan-toggle-row">
+        <button
+          type="button"
+          className={`icon-btn labeled ${scannerOpen ? "active" : ""}`}
+          onClick={() => setScannerOpen((v) => !v)}
+        >
+          <QrCode size={16} />
+          {scannerOpen ? "Taramayı Kapat" : "QR ile Sevkiyat Doldur"}
+        </button>
+      </div>
+
+      {scannerOpen && (
+        <CameraPanel
+          camera={camera}
+          cameraOn={scannerOpen}
+          onToggleCamera={() => setScannerOpen(false)}
+          scanMode="qr"
+          lastHit={lastHit}
+        />
+      )}
 
       <form className="product-form" onSubmit={handleSubmit}>
         <div className="field">
