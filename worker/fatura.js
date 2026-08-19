@@ -1,6 +1,11 @@
 import { json } from "./utils.js";
 
-const DOC_TYPES = new Set(["fatura", "irsaliye"]);
+// "fis" (Satış/POS ekranının kestiği fiş) faturalar/fatura_ayarlari
+// tablolarını fatura/irsaliye ile paylaşıyor - kendi evrak-no sayacı
+// (sonraki_fis_no) ve "FIS-" ön eki var, bkz. claimEvrakNo. Gün Sonu/Z
+// Raporu bu kayıtları (tur='fis', tarih bazlı) frontend'de topluyor - ayrı
+// bir rapor endpoint'i yok.
+const DOC_TYPES = new Set(["fatura", "irsaliye", "fis"]);
 
 function settingsRow(row) {
   return {
@@ -32,6 +37,7 @@ function faturaRow(row) {
     kdvOrani: row.kdv_orani,
     kdvTutari: row.kdv_tutari,
     genelToplam: row.genel_toplam,
+    odemeYontemi: row.odeme_yontemi,
     notMetni: row.not_metni,
     createdAt: row.created_at,
   };
@@ -73,13 +79,15 @@ async function listFaturalar(env) {
 // a single UPDATE...RETURNING so two requests can never be handed the same
 // number. Runs *after* input validation in createFatura, so a rejected
 // submission never burns a number.
+const EVRAK_COLUMN = { fatura: "sonraki_fatura_no", irsaliye: "sonraki_irsaliye_no", fis: "sonraki_fis_no" };
+const EVRAK_PREFIX = { fatura: "FTR", irsaliye: "IRS", fis: "FIS" };
+
 async function claimEvrakNo(env, tur) {
-  const column = tur === "fatura" ? "sonraki_fatura_no" : "sonraki_irsaliye_no";
+  const column = EVRAK_COLUMN[tur];
   const row = await env.DB.prepare(
     `UPDATE fatura_ayarlari SET ${column} = ${column} + 1 WHERE id = 1 RETURNING ${column} - 1 AS no`
   ).first();
-  const prefix = tur === "fatura" ? "FTR" : "IRS";
-  return `${prefix}-${String(row.no).padStart(4, "0")}`;
+  return `${EVRAK_PREFIX[tur]}-${String(row.no).padStart(4, "0")}`;
 }
 
 async function createFatura(request, env) {
@@ -91,13 +99,17 @@ async function createFatura(request, env) {
   }
 
   const tur = DOC_TYPES.has(body.tur) ? body.tur : "fatura";
-  const muhatapAdi = String(body.muhatapAdi ?? "").trim();
+  // Fiş, Satış (POS) ekranından geliyor ve genelde tek seferlik bir müşteri
+  // için - muhatap adı zorunlu tutulmuyor, boşsa jenerik bir etiket yazılıyor.
+  const muhatapAdi = String(body.muhatapAdi ?? "").trim() || (tur === "fis" ? "Perakende Satış" : "");
   if (!muhatapAdi) return json({ error: "Muhatap adı zorunlu." }, { status: 400 });
 
   const kalemlerIn = Array.isArray(body.kalemler) ? body.kalemler : [];
   if (kalemlerIn.length === 0) return json({ error: "En az bir kalem eklemelisiniz." }, { status: 400 });
 
   const kalemler = [];
+  let araToplam = 0;
+  let kdvTutari = 0;
   for (const k of kalemlerIn) {
     const urunAdi = String(k.urunAdi ?? "").trim();
     if (!urunAdi) return json({ error: "Her kalemin ürün adı olmalı." }, { status: 400 });
@@ -109,22 +121,40 @@ async function createFatura(request, env) {
     if (!Number.isFinite(birimFiyat) || birimFiyat < 0) {
       return json({ error: `"${urunAdi}" için birim fiyat geçerli bir sayı olmalı.` }, { status: 400 });
     }
-    kalemler.push({
-      urunAdi,
-      miktar,
-      birim: String(k.birim ?? "").trim(),
-      birimFiyat,
-      tutar: Math.round(miktar * birimFiyat * 100) / 100,
-    });
-  }
 
-  const araToplam = Math.round(kalemler.reduce((sum, k) => sum + k.tutar, 0) * 100) / 100;
-  const kdvOraniRaw = body.kdvOrani;
-  const kdvOrani = tur === "fatura" && kdvOraniRaw !== "" && kdvOraniRaw != null ? Number(kdvOraniRaw) : 0;
-  if (!Number.isFinite(kdvOrani) || kdvOrani < 0) {
-    return json({ error: "KDV oranı geçerli bir sayı olmalı." }, { status: 400 });
+    if (tur === "fis") {
+      // Fiş'te birimFiyat VERGİ DAHİL (POS'ta gösterilen "son satış fiyatı")
+      // - satır toplamını vergisiz tutara indirip KDV'yi ayrıştırıyoruz, ki
+      // belge toplamları (ara_toplam/kdv_tutari/genel_toplam) fatura ile
+      // aynı anlamı taşısın: vergisiz + KDV = genel toplam (= müşterinin
+      // ödediği vergi dahil tutar). Sepette ürün başına farklı KDV oranı
+      // olabilir (ör. gıda %1, elektronik %20) - bu yüzden tek bir üst
+      // seviye kdvOrani yerine satır satır hesaplanıyor.
+      const vergiOrani = Number(k.vergiOrani) || 0;
+      const satirVergiliToplam = Math.round(miktar * birimFiyat * 100) / 100;
+      const satirVergisiz = Math.round((satirVergiliToplam / (1 + vergiOrani / 100)) * 100) / 100;
+      const satirKdv = Math.round((satirVergiliToplam - satirVergisiz) * 100) / 100;
+      kalemler.push({ urunAdi, miktar, birim: String(k.birim ?? "").trim(), birimFiyat, vergiOrani, tutar: satirVergisiz, kdvTutari: satirKdv });
+      araToplam += satirVergisiz;
+      kdvTutari += satirKdv;
+    } else {
+      const tutar = Math.round(miktar * birimFiyat * 100) / 100;
+      kalemler.push({ urunAdi, miktar, birim: String(k.birim ?? "").trim(), birimFiyat, tutar });
+      araToplam += tutar;
+    }
   }
-  const kdvTutari = Math.round(((araToplam * kdvOrani) / 100) * 100) / 100;
+  araToplam = Math.round(araToplam * 100) / 100;
+
+  let kdvOrani = 0;
+  if (tur === "fatura") {
+    const kdvOraniRaw = body.kdvOrani;
+    kdvOrani = kdvOraniRaw !== "" && kdvOraniRaw != null ? Number(kdvOraniRaw) : 0;
+    if (!Number.isFinite(kdvOrani) || kdvOrani < 0) {
+      return json({ error: "KDV oranı geçerli bir sayı olmalı." }, { status: 400 });
+    }
+    kdvTutari = (araToplam * kdvOrani) / 100;
+  }
+  kdvTutari = Math.round(kdvTutari * 100) / 100;
   const genelToplam = Math.round((araToplam + kdvTutari) * 100) / 100;
 
   const evrakNo = await claimEvrakNo(env, tur);
@@ -134,8 +164,8 @@ async function createFatura(request, env) {
   await env.DB.prepare(
     `INSERT INTO faturalar
        (id, tur, evrak_no, tarih, cari_id, muhatap_adi, muhatap_adres, muhatap_telefon,
-        kalemler, ara_toplam, kdv_orani, kdv_tutari, genel_toplam, not_metni, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`
+        kalemler, ara_toplam, kdv_orani, kdv_tutari, genel_toplam, odeme_yontemi, not_metni, created_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)`
   )
     .bind(
       id,
@@ -151,6 +181,7 @@ async function createFatura(request, env) {
       kdvOrani,
       kdvTutari,
       genelToplam,
+      String(body.odemeYontemi ?? "").trim() || null,
       String(body.notMetni ?? "").trim() || null,
       now
     )

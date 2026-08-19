@@ -18,6 +18,7 @@ const EMPTY_FORM = {
   birim: "",
   miktar: "",
   minStok: "",
+  vergiOrani: "",
 };
 
 function toFormShape(p) {
@@ -31,6 +32,7 @@ function toFormShape(p) {
     birim: p.birim || "",
     miktar: p.miktar ?? "",
     minStok: p.minStok ?? "",
+    vergiOrani: p.vergiOrani ?? "",
   };
 }
 
@@ -151,6 +153,7 @@ export default function ProductEntryDashboard({
       birim: form.birim.trim(),
       miktar: form.miktar === "" ? null : Number(form.miktar),
       minStok: form.minStok === "" ? null : Number(form.minStok),
+      vergiOrani: form.vergiOrani === "" ? null : Number(form.vergiOrani),
     };
     try {
       if (editingId) {
@@ -321,6 +324,20 @@ export default function ProductEntryDashboard({
           />
         </div>
 
+        <div className="field">
+          <label htmlFor="pf-vergi">Vergi Oranı (%)</label>
+          <input
+            id="pf-vergi"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            value={form.vergiOrani}
+            onChange={(e) => updateField("vergiOrani", e.target.value)}
+            placeholder="örn. 20 (KDV)"
+          />
+        </div>
+
         {submitError && <p className="form-error">{submitError}</p>}
 
         <div className="form-actions">
@@ -370,6 +387,7 @@ export default function ProductEntryDashboard({
                   <th>Maliyet</th>
                   <th>Stok</th>
                   <th>Min.</th>
+                  <th>Vergi %</th>
                   <th>Durum</th>
                   <th />
                 </tr>
@@ -391,6 +409,9 @@ export default function ProductEntryDashboard({
                       </td>
                       <td>
                         <StockAdjuster value={p.minStok} onSave={(v) => updateProduct(p.id, { minStok: v })} />
+                      </td>
+                      <td>
+                        <StockAdjuster value={p.vergiOrani} onSave={(v) => updateProduct(p.id, { vergiOrani: v })} />
                       </td>
                       <td className={status.cls}>{status.label}</td>
                       <td className="row-actions">

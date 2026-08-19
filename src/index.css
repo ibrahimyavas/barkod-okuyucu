@@ -1182,6 +1182,16 @@ select.status-badge {
   display: flex;
 }
 
+.satis-checkout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
 /* ---- taranmış-ama-kataloglanmamış barkod paneli (bkz. UncatalogedScansPanel.jsx) --- */
 
 .uncataloged-panel {

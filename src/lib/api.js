@@ -59,6 +59,23 @@ export function deleteUrunKatalog(id) {
   return request(`/api/urun-katalog/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchSatisFiyatlari() {
+  const data = await request("/api/satis-fiyatlari");
+  return data.items;
+}
+
+export function createSatisFiyati(item) {
+  return request("/api/satis-fiyatlari", withJsonBody("POST", item));
+}
+
+export function updateSatisFiyati(id, fields) {
+  return request(`/api/satis-fiyatlari/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
+export function deleteSatisFiyati(id) {
+  return request(`/api/satis-fiyatlari/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export async function fetchSuppliers() {
   const data = await request("/api/suppliers");
   return data.suppliers;

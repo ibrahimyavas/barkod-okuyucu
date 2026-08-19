@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ScanLine, ClipboardList, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck,
-  Sun, Moon, PanelLeft, PanelTop, PanelLeftClose, PanelLeftOpen, LogOut,
+  ScanLine, ClipboardList, PackagePlus, Tags, ShoppingBag, ShoppingCart, Landmark, AlertTriangle, Tag,
+  LayoutDashboard, FileText, Truck, Sun, Moon, PanelLeft, PanelTop, PanelLeftClose, PanelLeftOpen, LogOut,
 } from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
 import { useNavLayout } from "./hooks/useNavLayout.js";
 import { useProducts } from "./hooks/useProducts.js";
 import { useUrunKatalog } from "./hooks/useUrunKatalog.js";
+import { useSatisFiyatlari } from "./hooks/useSatisFiyatlari.js";
 import { isLowStock } from "./lib/stock.js";
 import ScannerView from "./components/ScannerView.jsx";
 import UrunListesiDashboard from "./components/UrunListesiDashboard.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
+import SatisFiyatlariDashboard from "./components/SatisFiyatlariDashboard.jsx";
+import SatisDashboard from "./components/SatisDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
 import CariHesapDashboard from "./components/CariHesapDashboard.jsx";
 import LowStockDashboard from "./components/LowStockDashboard.jsx";
@@ -24,10 +27,14 @@ import { fetchAuthStatus, logout } from "./lib/api.js";
 // Each new dashboard just needs an entry here - App.jsx doesn't otherwise
 // need to change as the module list grows. "catalog" oturuyor Tarayıcı ile
 // Ürün Girişi arasında - kullanıcının "ara ekran" isteği tam olarak bu konum.
+// "satisFiyatlari"/"satis" da aynı mantıkla stok (products) ile satış
+// arasında oturuyor.
 const TABS = [
   { id: "scanner", label: "Tarayıcı", icon: ScanLine },
   { id: "catalog", label: "Ürün Listesi", icon: ClipboardList },
   { id: "products", label: "Ürün Girişi", icon: PackagePlus },
+  { id: "satisFiyatlari", label: "Satış Fiyatları", icon: Tags },
+  { id: "satis", label: "Satış", icon: ShoppingBag },
   { id: "purchasing", label: "Satın Alma", icon: ShoppingCart },
   { id: "cari", label: "Cari Hesap", icon: Landmark },
   { id: "lowstock", label: "Düşük Stok", icon: AlertTriangle },
@@ -55,6 +62,10 @@ export default function App() {
   // ad/kategori/birim doldurma için (bkz. lib/catalog.js).
   const { catalog, loading: catalogLoading, error: catalogError, addEntry, updateEntry, removeEntry } =
     useUrunKatalog(authenticated);
+  // Satış Fiyatları (stok ile Satış/POS arasındaki ara katman) - Satış
+  // ekranının barkod okutunca fiyat bulabilmesi için burada da lazım.
+  const { fiyatlar, loading: fiyatlarLoading, error: fiyatlarError, addFiyat, updateFiyat, removeFiyat } =
+    useSatisFiyatlari(authenticated);
   const lowStockCount = useMemo(() => products.filter(isLowStock).length, [products]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -158,6 +169,19 @@ export default function App() {
           catalog={catalog}
         />
       )}
+      {view === "satisFiyatlari" && (
+        <SatisFiyatlariDashboard
+          fiyatlar={fiyatlar}
+          loading={fiyatlarLoading}
+          error={fiyatlarError}
+          addFiyat={addFiyat}
+          updateFiyat={updateFiyat}
+          removeFiyat={removeFiyat}
+          catalog={catalog}
+          products={products}
+        />
+      )}
+      {view === "satis" && <SatisDashboard fiyatlar={fiyatlar} products={products} />}
       {view === "purchasing" && <PurchasingDashboard catalog={catalog} />}
       {view === "cari" && <CariHesapDashboard />}
       {view === "lowstock" && (

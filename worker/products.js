@@ -12,6 +12,7 @@ function productRow(row) {
     birim: row.birim,
     miktar: row.miktar,
     minStok: row.min_stok,
+    vergiOrani: row.vergi_orani,
     createdAt: row.created_at,
   };
 }
@@ -25,7 +26,7 @@ function parseOptionalNumber(value, label) {
 
 async function listProducts(env) {
   const { results } = await env.DB.prepare(
-    `SELECT id, barkod, urun_adi, kategori, depo_konumu, alinis_tarihi, maliyet, birim, miktar, min_stok, created_at
+    `SELECT id, barkod, urun_adi, kategori, depo_konumu, alinis_tarihi, maliyet, birim, miktar, min_stok, vergi_orani, created_at
      FROM products ORDER BY created_at DESC`
   ).all();
   return json({ products: results.map(productRow) });
@@ -45,7 +46,8 @@ async function createProduct(request, env) {
   const maliyet = parseOptionalNumber(body.maliyet, "Maliyet");
   const miktar = parseOptionalNumber(body.miktar, "Miktar");
   const minStok = parseOptionalNumber(body.minStok, "Min. stok");
-  for (const r of [maliyet, miktar, minStok]) {
+  const vergiOrani = parseOptionalNumber(body.vergiOrani, "Vergi oranı");
+  for (const r of [maliyet, miktar, minStok, vergiOrani]) {
     if (!r.ok) return json({ error: r.error }, { status: 400 });
   }
 
@@ -53,8 +55,8 @@ async function createProduct(request, env) {
   const now = Date.now();
 
   await env.DB.prepare(
-    `INSERT INTO products (id, barkod, urun_adi, kategori, depo_konumu, alinis_tarihi, maliyet, birim, miktar, min_stok, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
+    `INSERT INTO products (id, barkod, urun_adi, kategori, depo_konumu, alinis_tarihi, maliyet, birim, miktar, min_stok, vergi_orani, created_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`
   )
     .bind(
       id,
@@ -67,6 +69,7 @@ async function createProduct(request, env) {
       String(body.birim ?? "").trim() || null,
       miktar.value,
       minStok.value,
+      vergiOrani.value,
       now
     )
     .run();
@@ -125,6 +128,12 @@ async function updateProduct(request, env, id) {
     const r = parseOptionalNumber(body.minStok, "Min. stok");
     if (!r.ok) return json({ error: r.error }, { status: 400 });
     sets.push(`min_stok = ?${idx++}`);
+    values.push(r.value);
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "vergiOrani")) {
+    const r = parseOptionalNumber(body.vergiOrani, "Vergi oranı");
+    if (!r.ok) return json({ error: r.error }, { status: 400 });
+    sets.push(`vergi_orani = ?${idx++}`);
     values.push(r.value);
   }
 
