@@ -11,7 +11,7 @@ const FALLBACK_INTERVAL_MS = 66; // ~15fps, used only when requestVideoFrameCall
  * where unsupported) and is guarded against overlap so a slow decode never
  * queues up a backlog of frames.
  */
-export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect }) {
+export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, resolveDetector = resolveBarcodeDetector, onDetect }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -31,6 +31,12 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect 
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
   const [usingNative, setUsingNative] = useState(null); // null = not resolved yet
+
+  // A stable primitive to key the effect below on, instead of the `formats`
+  // array itself - callers that pass a fresh array literal each render
+  // (e.g. `formats={mode === "qr" ? QR_ONLY_FORMATS : DEFAULT_FORMATS}`)
+  // would otherwise restart the camera on every render.
+  const formatsKey = formats.join(",");
 
   const drawOverlay = useCallback((barcode) => {
     const canvas = canvasRef.current;
@@ -147,7 +153,7 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect 
       audio: false,
     };
 
-    Promise.all([resolveBarcodeDetector(formats), navigator.mediaDevices.getUserMedia(constraints)])
+    Promise.all([resolveDetector(formats), navigator.mediaDevices.getUserMedia(constraints)])
       .then(async ([{ Impl, usingNative: isNative }, stream]) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -187,7 +193,7 @@ export function useCameraScanner({ enabled, formats = DEFAULT_FORMATS, onDetect 
       stopStream();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, activeDeviceId]);
+  }, [enabled, activeDeviceId, formatsKey, resolveDetector]);
 
   const toggleTorch = useCallback(async () => {
     const track = trackRef.current;

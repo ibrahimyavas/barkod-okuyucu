@@ -19,7 +19,12 @@ const JSBARCODE_FORMAT = {
 // Renders one printable label: barcode/QR + optional product name + price.
 // Used both for the live preview while filling out the form and, many times
 // over, inside the print sheet.
-export default function BarcodeLabel({ barkod, urunAdi, fiyat, format }) {
+//
+// `qrPayload` (QR only): when set, this is what actually gets encoded into
+// the QR instead of the plain `barkod` - see lib/qrPayload.js. `nereden`/
+// `nereye` are shown as visible text on the label too, so a human glancing
+// at it sees the route without needing to scan anything.
+export default function BarcodeLabel({ barkod, urunAdi, fiyat, format, qrPayload, nereden, nereye }) {
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
   const [error, setError] = useState(null);
@@ -30,7 +35,7 @@ export default function BarcodeLabel({ barkod, urunAdi, fiyat, format }) {
 
     if (format === "qr_code") {
       if (!canvasRef.current) return;
-      QRCode.toCanvas(canvasRef.current, barkod, { margin: 1, width: 90 }).catch((err) =>
+      QRCode.toCanvas(canvasRef.current, qrPayload || barkod, { margin: 1, width: 90 }).catch((err) =>
         setError(err?.message || "QR kod üretilemedi.")
       );
       return;
@@ -51,7 +56,7 @@ export default function BarcodeLabel({ barkod, urunAdi, fiyat, format }) {
       // chosen symbology (e.g. a 9-digit code picked as EAN-13).
       setError(err?.message || "Bu kod bu formatla üretilemedi.");
     }
-  }, [barkod, format]);
+  }, [barkod, format, qrPayload]);
 
   return (
     <div className="label-card">
@@ -62,6 +67,11 @@ export default function BarcodeLabel({ barkod, urunAdi, fiyat, format }) {
         <canvas ref={canvasRef} />
       ) : (
         <svg ref={svgRef} />
+      )}
+      {(nereden || nereye) && (
+        <div className="label-route">
+          {nereden || "?"} → {nereye || "?"}
+        </div>
       )}
       {fiyat != null && fiyat !== "" && <div className="label-price">{fmtCurrency(fiyat)}</div>}
     </div>

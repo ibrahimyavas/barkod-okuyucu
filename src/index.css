@@ -310,7 +310,38 @@ body {
 
 .detector-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scan-mode-toggle {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.scan-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.scan-mode-btn.active {
+  background: var(--accent-dim);
+  color: var(--accent-on-dim);
+  font-weight: 600;
 }
 
 .detector-badge {
@@ -964,6 +995,12 @@ select.status-badge {
   font-size: 0.85rem;
   font-weight: 700;
   color: #111;
+}
+
+.label-route {
+  font-size: 0.68rem;
+  color: #444;
+  text-align: center;
 }
 
 .label-error {

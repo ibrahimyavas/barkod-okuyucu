@@ -66,3 +66,17 @@ export function resolveBarcodeDetector(formats = DEFAULT_FORMATS) {
   cached = { key, promise };
   return promise;
 }
+
+// Formats for the Tarayıcı screen's dedicated "QR" mode.
+export const QR_ONLY_FORMATS = ["qr_code"];
+
+// getSupportedFormats() reporting "qr_code" doesn't guarantee the native
+// implementation actually decodes QR reliably in practice - we've seen
+// devices where it passes that check but real-world QR reads still fail
+// while the WASM engine handles the exact same code fine. Since native's
+// whole appeal is speed on formats it demonstrably gets right, and this is a
+// single-format, low-volume scan mode anyway, it isn't worth the same
+// capability gamble: QR mode always uses the WASM engine, unconditionally.
+export function resolveQrOnlyDetector() {
+  return Promise.resolve({ Impl: PonyfillBarcodeDetector, usingNative: false });
+}

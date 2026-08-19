@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
-import { Volume2, VolumeX, Radio, Download, Trash2, Gauge } from "lucide-react";
+import { Volume2, VolumeX, Radio, Download, Trash2, Gauge, ScanLine, QrCode } from "lucide-react";
 import { useScanStore } from "../hooks/useScanStore.js";
 import { useCameraScanner } from "../hooks/useCameraScanner.js";
 import { useKeyboardWedge } from "../hooks/useKeyboardWedge.js";
 import { playBeep, vibrate } from "../lib/beep.js";
 import { scansToCSV, downloadTextFile } from "../lib/csv.js";
+import { DEFAULT_FORMATS, QR_ONLY_FORMATS, resolveQrOnlyDetector } from "../lib/barcodeDetector.js";
 import CameraPanel from "./CameraPanel.jsx";
 import ScanTable from "./ScanTable.jsx";
 import ManualEntry from "./ManualEntry.jsx";
@@ -15,6 +16,9 @@ export default function ScannerView({ onSendToEntry }) {
   const [soundOn, setSoundOn] = useState(true);
   const [wedgeOn, setWedgeOn] = useState(true);
   const [slowDevice, setSlowDevice] = useState(false);
+  // "barkod" (varsayılan, dokunulmadı) vs "qr" - QR modu her zaman WASM
+  // motorunu zorluyor, bkz. lib/barcodeDetector.js:resolveQrOnlyDetector.
+  const [scanMode, setScanMode] = useState("barkod");
 
   const feedback = useCallback(
     (outcome) => {
@@ -48,7 +52,12 @@ export default function ScannerView({ onSendToEntry }) {
     [addScan, feedback]
   );
 
-  const camera = useCameraScanner({ enabled: cameraOn, onDetect: handleCameraDetect });
+  const camera = useCameraScanner({
+    enabled: cameraOn,
+    formats: scanMode === "qr" ? QR_ONLY_FORMATS : DEFAULT_FORMATS,
+    resolveDetector: scanMode === "qr" ? resolveQrOnlyDetector : undefined,
+    onDetect: handleCameraDetect,
+  });
   useKeyboardWedge({ enabled: wedgeOn, slowDevice, onScan: handleWedgeScan });
 
   const handleExport = () => {
@@ -59,17 +68,41 @@ export default function ScannerView({ onSendToEntry }) {
   return (
     <>
       <div className="detector-row">
+        <div className="scan-mode-toggle">
+          <button
+            type="button"
+            className={`scan-mode-btn ${scanMode === "barkod" ? "active" : ""}`}
+            onClick={() => setScanMode("barkod")}
+          >
+            <ScanLine size={14} /> Barkod
+          </button>
+          <button
+            type="button"
+            className={`scan-mode-btn ${scanMode === "qr" ? "active" : ""}`}
+            onClick={() => setScanMode("qr")}
+          >
+            <QrCode size={14} /> QR
+          </button>
+        </div>
         <span
           className="detector-badge"
           title={
-            camera.usingNative == null
-              ? "Dedektör hazırlanıyor…"
-              : camera.usingNative
-                ? "Tarayıcının yerleşik dedektörü tüm formatları destekliyor, o kullanılıyor (en hızlı)"
-                : "Yerleşik dedektör tüm formatları desteklemiyor (veya yok) - güvenilir olan yazılımsal (WASM) dedektöre geçildi"
+            scanMode === "qr"
+              ? "QR modu her zaman güvenilir yazılımsal (WASM) dedektörü kullanır"
+              : camera.usingNative == null
+                ? "Dedektör hazırlanıyor…"
+                : camera.usingNative
+                  ? "Tarayıcının yerleşik dedektörü tüm formatları destekliyor, o kullanılıyor (en hızlı)"
+                  : "Yerleşik dedektör tüm formatları desteklemiyor (veya yok) - güvenilir olan yazılımsal (WASM) dedektöre geçildi"
           }
         >
-          {camera.usingNative == null ? "Dedektör hazırlanıyor…" : camera.usingNative ? "Yerleşik dedektör" : "WASM dedektör"}
+          {scanMode === "qr"
+            ? "WASM dedektör (QR)"
+            : camera.usingNative == null
+              ? "Dedektör hazırlanıyor…"
+              : camera.usingNative
+                ? "Yerleşik dedektör"
+                : "WASM dedektör"}
         </span>
       </div>
 

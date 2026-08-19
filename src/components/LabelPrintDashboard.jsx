@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash2, Printer, Tag } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
+import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useLabelQueue } from "../hooks/useLabelQueue.js";
+import { buildRoutePayload } from "../lib/qrPayload.js";
 import BarcodeLabel from "./BarcodeLabel.jsx";
 
 const FORMAT_OPTIONS = [
@@ -16,13 +18,17 @@ const FORMAT_OPTIONS = [
   { value: "qr_code", label: "QR Kod" },
 ];
 
-const EMPTY_FORM = { barkod: "", urunAdi: "", fiyat: "", format: "code_128" };
+const EMPTY_FORM = { barkod: "", urunAdi: "", fiyat: "", format: "code_128", nereden: "", nereye: "" };
 
 export default function LabelPrintDashboard() {
   const { products } = useProducts();
+  const { sevkiyatlar } = useSevkiyatlar();
   const { items, addItem, updateCount, removeItem, clearAll } = useLabelQueue();
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedSevkiyatId, setSelectedSevkiyatId] = useState("");
+
+  const isQr = form.format === "qr_code";
 
   function pickProduct(id) {
     setSelectedProductId(id);
@@ -37,6 +43,21 @@ export default function LabelPrintDashboard() {
     }
   }
 
+  // Sadece güzergahı (nereden/nereye) dolduruyor - ürün kimliği hâlâ ayrı,
+  // Ürün Girişi seçicisinden ya da elle geliyor. Lojistik kayıtlarında ürün
+  // bilgisi yok, sadece taraf/plaka/güzergah var.
+  function pickSevkiyat(id) {
+    setSelectedSevkiyatId(id);
+    const s = sevkiyatlar.find((sv) => sv.id === id);
+    if (s) {
+      setForm((f) => ({
+        ...f,
+        nereden: s.cikisKonumu || f.nereden,
+        nereye: s.varisKonumu || f.nereye,
+      }));
+    }
+  }
+
   function updateField(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
@@ -45,11 +66,18 @@ export default function LabelPrintDashboard() {
     e.preventDefault();
     const barkod = form.barkod.trim();
     if (!barkod) return;
+    const urunAdi = form.urunAdi.trim();
+    const nereden = form.nereden.trim();
+    const nereye = form.nereye.trim();
+    const hasRoute = isQr && (nereden || nereye);
     addItem({
       barkod,
-      urunAdi: form.urunAdi.trim(),
+      urunAdi,
       fiyat: form.fiyat === "" ? null : Number(form.fiyat),
       format: form.format,
+      nereden: hasRoute ? nereden : "",
+      nereye: hasRoute ? nereye : "",
+      qrPayload: hasRoute ? buildRoutePayload({ urunAdi, barkod, nereden, nereye }) : null,
     });
   }
 
@@ -121,6 +149,32 @@ export default function LabelPrintDashboard() {
           </select>
         </div>
 
+        {isQr && (
+          <>
+            <div className="field field-wide">
+              <label htmlFor="lb-sevkiyat-sec">Sevkiyattan güzergah doldur (opsiyonel)</label>
+              <select id="lb-sevkiyat-sec" value={selectedSevkiyatId} onChange={(e) => pickSevkiyat(e.target.value)}>
+                <option value="">— Elle gir —</option>
+                {sevkiyatlar.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.tarafAdi} ({s.cikisKonumu || "?"} → {s.varisKonumu || "?"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="lb-nereden">Nereden</label>
+              <input id="lb-nereden" type="text" value={form.nereden} onChange={(e) => updateField("nereden", e.target.value)} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="lb-nereye">Nereye</label>
+              <input id="lb-nereye" type="text" value={form.nereye} onChange={(e) => updateField("nereye", e.target.value)} />
+            </div>
+          </>
+        )}
+
         <div className="field field-wide">
           <label>Önizleme</label>
           {form.barkod ? (
@@ -129,6 +183,13 @@ export default function LabelPrintDashboard() {
               urunAdi={form.urunAdi}
               fiyat={form.fiyat === "" ? null : Number(form.fiyat)}
               format={form.format}
+              nereden={isQr ? form.nereden : ""}
+              nereye={isQr ? form.nereye : ""}
+              qrPayload={
+                isQr && (form.nereden || form.nereye)
+                  ? buildRoutePayload({ urunAdi: form.urunAdi, barkod: form.barkod, nereden: form.nereden, nereye: form.nereye })
+                  : null
+              }
             />
           ) : (
             <p className="empty-state">Önizleme için bir kod girin.</p>
@@ -153,6 +214,7 @@ export default function LabelPrintDashboard() {
                     <th>Ürün</th>
                     <th>Kod</th>
                     <th>Format</th>
+                    <th>Güzergah</th>
                     <th>Adet</th>
                     <th />
                   </tr>
@@ -163,6 +225,7 @@ export default function LabelPrintDashboard() {
                       <td>{it.urunAdi || "-"}</td>
                       <td className="code-cell">{it.barkod}</td>
                       <td className="muted">{FORMAT_OPTIONS.find((o) => o.value === it.format)?.label.split(" (")[0] || it.format}</td>
+                      <td className="muted">{it.nereden || it.nereye ? `${it.nereden || "?"} → ${it.nereye || "?"}` : "-"}</td>
                       <td>
                         <input
                           type="number"
@@ -205,7 +268,16 @@ export default function LabelPrintDashboard() {
       <div className="print-area">
         {items.flatMap((it) =>
           Array.from({ length: it.adet }, (_, i) => (
-            <BarcodeLabel key={`${it.id}-${i}`} barkod={it.barkod} urunAdi={it.urunAdi} fiyat={it.fiyat} format={it.format} />
+            <BarcodeLabel
+              key={`${it.id}-${i}`}
+              barkod={it.barkod}
+              urunAdi={it.urunAdi}
+              fiyat={it.fiyat}
+              format={it.format}
+              qrPayload={it.qrPayload}
+              nereden={it.nereden}
+              nereye={it.nereye}
+            />
           ))
         )}
       </div>
