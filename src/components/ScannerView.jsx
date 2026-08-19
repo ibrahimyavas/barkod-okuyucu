@@ -103,7 +103,7 @@ export default function ScannerView({ onSendToEntry }) {
           className="detector-badge"
           title={
             scanMode === "qr"
-              ? "QR modu her zaman hafif, hızlı yazılımsal (jsQR) dedektörü kullanır"
+              ? "QR modu her zaman ayrı bir Web Worker'da çalışan optimize edilmiş dedektörü kullanır (arayüzü bloklamaz)"
               : camera.usingNative == null
                 ? "Dedektör hazırlanıyor…"
                 : camera.usingNative

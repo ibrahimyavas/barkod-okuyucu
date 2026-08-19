@@ -79,13 +79,17 @@ export const QR_ONLY_FORMATS = ["qr_code"];
 // It also doesn't use the zxing-wasm engine used elsewhere in this file:
 // that engine's exhaustive tryHarder/tryRotate/tryInvert passes (plus its
 // ~1MB WASM binary having to load and boot on first use) made QR mode
-// noticeably slow in practice. jsQR is a lightweight pure-JS, single-pass
-// decoder - see lib/jsQrDetector.js for the detailed tradeoff reasoning.
+// noticeably slow in practice. A first attempt at a lighter pure-JS engine
+// (jsQR directly) still wasn't reliable/fast enough, so QR mode now uses
+// nimiq/qr-scanner - a mature, widely-used third-party project that wraps
+// an optimized ZXing derivative and runs it in a Web Worker (keeps the
+// main thread - camera preview, UI - unblocked). See
+// lib/qrScannerDetector.js for the detailed reasoning and setup.
 //
 // Dynamically imported (rather than imported at the top of this file) so
-// jsQR's code only downloads when someone actually switches to QR mode -
+// its code only downloads when someone actually switches to QR mode -
 // barcode-only sessions (the common case) don't pay for it.
 export async function resolveQrOnlyDetector() {
-  const { JsQrDetector } = await import("./jsQrDetector.js");
-  return { Impl: JsQrDetector, usingNative: false };
+  const { QrScannerDetector } = await import("./qrScannerDetector.js");
+  return { Impl: QrScannerDetector, usingNative: false };
 }
