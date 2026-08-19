@@ -33,6 +33,15 @@ sekmeler:
   (ikisinden biri boşsa - "stok takibi yapmıyorum" demektir - o ürün hiç
   görünmez). En kritik ürün en üstte; buradan da stoğu doğrudan
   güncelleyebilirsiniz.
+- **Etiket Bas:** Ürün Girişi'nden bir ürün seçip (ya da elle kod girip)
+  barkod/QR etiketi üretir - EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39,
+  ITF, Codabar, QR Kod destekleniyor (`jsbarcode` + `qrcode`, tamamen
+  istemci tarafında, backend'e gerek yok). Birden fazla ürünü kuyruğa
+  ekleyip (her biri için ayrı adet belirleyip) tek seferde `window.print()`
+  ile yazdırabilirsiniz - yazdırma sayfası sadece etiketleri gösterecek
+  şekilde özel bir `@media print` düzeniyle hazırlanıyor. Kuyruk
+  localStorage'da tutulur (yazdırma fiziksel/tek cihaza özel bir eylem
+  olduğu için D1'e taşınmadı).
 
 ## Nasıl çalışır
 
@@ -177,6 +186,14 @@ veriyi görür.
 Taranan formatlar `src/lib/barcodeDetector.js` içindeki `DEFAULT_FORMATS`
 listesinde. Liste kısa tutuldukça algılama daha hızlı çalışır; kullanmadığınız
 formatları listeden çıkarmanız, yenilerini eklemekten daha çok hız kazandırır.
+
+## Etiket boyutunu değiştirmek
+
+Etiketler şu an 60mm × 35mm sabit boyutta (`src/index.css`'teki `@media
+print .label-card` kuralı). Farklı bir etiket kağıdınız/yazıcınız varsa bu
+`width`/`height` değerlerini kendi etiketinizin ölçüsüne göre değiştirin;
+tarayıcının yazdırma diyaloğundaki ölçek/kenar boşluğu ayarları da işe
+yarar.
 
 ## `barcode-detector`'ı güncellerken
 

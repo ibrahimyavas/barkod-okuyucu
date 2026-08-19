@@ -670,3 +670,82 @@ body {
   color: #fde68a;
   border-color: #eab308;
 }
+
+/* ---- label printing ------------------------------------------------------ */
+
+.qty-input {
+  width: 56px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+}
+
+.label-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff;
+}
+
+.label-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #111;
+  text-align: center;
+}
+
+.label-price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.label-error {
+  color: #b91c1c;
+  font-size: 0.7rem;
+  text-align: center;
+  max-width: 140px;
+}
+
+/* Kept in the DOM at all times (not just while printing) so `window.print()`
+   works the instant you click it - but hidden on screen. The print media
+   query below swaps it back in and hides everything else. */
+.print-area {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4mm;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .label-card {
+    width: 60mm;
+    height: 35mm;
+    border: 1px solid #000;
+    break-inside: avoid;
+  }
+  @page {
+    margin: 8mm;
+  }
+}
