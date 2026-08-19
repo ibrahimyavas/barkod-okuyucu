@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ScanLine, ClipboardList, PackagePlus, Tags, ShoppingBag, ShoppingCart, Landmark, AlertTriangle, Tag,
+  ScanLine, ClipboardList, PackagePlus, Tags, ShoppingBag, ShoppingCart, Landmark, Boxes, Tag,
   LayoutDashboard, FileText, Truck, Warehouse, Building2, Users, Settings, Sun, Moon, PanelLeft, PanelTop,
   PanelLeftClose, PanelLeftOpen, LogOut,
 } from "lucide-react";
@@ -22,7 +22,7 @@ import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
 import TedarikcilerDashboard from "./components/TedarikcilerDashboard.jsx";
 import MusterilerDashboard from "./components/MusterilerDashboard.jsx";
 import CariHesapDashboard from "./components/CariHesapDashboard.jsx";
-import LowStockDashboard from "./components/LowStockDashboard.jsx";
+import StokDashboard from "./components/StokDashboard.jsx";
 import LabelPrintDashboard from "./components/LabelPrintDashboard.jsx";
 import ReportDashboard from "./components/ReportDashboard.jsx";
 import FaturaDashboard from "./components/FaturaDashboard.jsx";
@@ -47,7 +47,7 @@ const TABS = [
   { id: "satis", label: "Satış", icon: ShoppingBag, group: "operasyon" },
   { id: "purchasing", label: "Satın Alma", icon: ShoppingCart, group: "operasyon" },
   { id: "cari", label: "Cari Hesap", icon: Landmark, group: "operasyon" },
-  { id: "lowstock", label: "Düşük Stok", icon: AlertTriangle, group: "operasyon" },
+  { id: "lowstock", label: "Stok", icon: Boxes, group: "operasyon" },
   { id: "labels", label: "Etiket Bas", icon: Tag, group: "operasyon" },
   { id: "report", label: "Rapor", icon: LayoutDashboard, group: "operasyon" },
   { id: "fatura", label: "Fatura", icon: FileText, group: "operasyon" },
@@ -72,10 +72,12 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [view, setView] = useState("scanner");
   const [prefillBarcode, setPrefillBarcode] = useState(null);
-  // Tek bir yerden çekilip Ürün Girişi ve Düşük Stok'a prop olarak veriliyor
-  // - hem gereksiz çift fetch'i önlüyor hem de "Düşük Stok" sekme/menü
-  // ikonundaki kırmızı rozeti (aşağıda lowStockCount) besliyor: bir ürünün
-  // stoğu güncellenince rozet de aynı render'da güncelleniyor.
+  // Tek bir yerden çekilip Ürün Girişi ve Stok'a prop olarak veriliyor - hem
+  // gereksiz çift fetch'i önlüyor hem de "Stok" sekme/menü ikonundaki
+  // kırmızı rozeti (aşağıda lowStockCount) besliyor: bir ürünün stoğu
+  // güncellenince (ve düşük stoğa girip/çıkınca) rozet de aynı render'da
+  // güncelleniyor - "Stok" genel bir envanter görünümü olsa da uyarı hâlâ
+  // tam olarak eskisi gibi düşük stok tetiklendiğinde çalışıyor.
   const { products, loading: productsLoading, error: productsError, addProduct, updateProduct, removeProduct } =
     useProducts(authenticated);
   // Barkod -> ürün kimliği kataloğu (bkz. hooks/useUrunKatalog.js) - Ürün
@@ -258,7 +260,7 @@ export default function App() {
       )}
       {view === "cari" && <CariHesapDashboard />}
       {view === "lowstock" && (
-        <LowStockDashboard
+        <StokDashboard
           products={products}
           loading={productsLoading}
           error={productsError}
