@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck,
-  Sun, Moon, PanelLeft, PanelTop, LogOut,
+  Sun, Moon, PanelLeft, PanelTop, PanelLeftClose, PanelLeftOpen, LogOut,
 } from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
 import { useNavLayout } from "./hooks/useNavLayout.js";
+import { useProducts } from "./hooks/useProducts.js";
+import { isLowStock } from "./lib/stock.js";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
@@ -38,6 +40,20 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [view, setView] = useState("scanner");
   const [prefillBarcode, setPrefillBarcode] = useState(null);
+  // Tek bir yerden çekilip Ürün Girişi ve Düşük Stok'a prop olarak veriliyor
+  // - hem gereksiz çift fetch'i önlüyor hem de "Düşük Stok" sekme/menü
+  // ikonundaki kırmızı rozeti (aşağıda lowStockCount) besliyor: bir ürünün
+  // stoğu güncellenince rozet de aynı render'da güncelleniyor.
+  const { products, loading: productsLoading, error: productsError, addProduct, updateProduct, removeProduct } =
+    useProducts(authenticated);
+  const lowStockCount = useMemo(() => products.filter(isLowStock).length, [products]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("barkod:sidebarCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     fetchAuthStatus()
@@ -51,6 +67,18 @@ export default function App() {
   const handleSendToEntry = useCallback((code) => {
     setPrefillBarcode(code);
     setView("products");
+  }, []);
+
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("barkod:sidebarCollapsed", next ? "1" : "0");
+      } catch {
+        // depolama yoksa tercih sadece bu oturumda kalır
+      }
+      return next;
+    });
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -99,11 +127,27 @@ export default function App() {
     <>
       {view === "scanner" && <ScannerView onSendToEntry={handleSendToEntry} />}
       {view === "products" && (
-        <ProductEntryDashboard prefillBarcode={prefillBarcode} onConsumePrefill={() => setPrefillBarcode(null)} />
+        <ProductEntryDashboard
+          prefillBarcode={prefillBarcode}
+          onConsumePrefill={() => setPrefillBarcode(null)}
+          products={products}
+          loading={productsLoading}
+          error={productsError}
+          addProduct={addProduct}
+          updateProduct={updateProduct}
+          removeProduct={removeProduct}
+        />
       )}
       {view === "purchasing" && <PurchasingDashboard />}
       {view === "cari" && <CariHesapDashboard />}
-      {view === "lowstock" && <LowStockDashboard />}
+      {view === "lowstock" && (
+        <LowStockDashboard
+          products={products}
+          loading={productsLoading}
+          error={productsError}
+          updateProduct={updateProduct}
+        />
+      )}
       {view === "labels" && <LabelPrintDashboard />}
       {view === "report" && <ReportDashboard />}
       {view === "fatura" && <FaturaDashboard />}
@@ -114,16 +158,29 @@ export default function App() {
   if (layout === "sidebar") {
     return (
       <div className="app-shell">
-        <aside className="sidebar">
-          <div className="sidebar-brand">Small ERP</div>
+        <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
+          <div className="sidebar-top">
+            {!sidebarCollapsed && <div className="sidebar-brand">Small ERP</div>}
+            <button
+              className="icon-btn sidebar-collapse-btn"
+              onClick={toggleSidebarCollapsed}
+              title={sidebarCollapsed ? "Menüyü genişlet" : "Menüyü daralt"}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+          </div>
           <nav className="sidebar-nav">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 className={`sidebar-link ${view === id ? "active" : ""}`}
                 onClick={() => setView(id)}
+                title={sidebarCollapsed ? label : undefined}
               >
-                <Icon size={18} />
+                <span className="nav-icon-wrap">
+                  <Icon size={18} />
+                  {id === "lowstock" && lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
+                </span>
                 <span>{label}</span>
               </button>
             ))}
@@ -153,7 +210,10 @@ export default function App() {
       <nav className="tab-nav">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} className={`tab-btn ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
-            <Icon size={16} />
+            <span className="nav-icon-wrap">
+              <Icon size={16} />
+              {id === "lowstock" && lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
+            </span>
             {label}
           </button>
         ))}

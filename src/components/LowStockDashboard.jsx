@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, PackageX, Search } from "lucide-react";
-import { useProducts } from "../hooks/useProducts.js";
 import { stockStatus, isLowStock } from "../lib/stock.js";
 import StockAdjuster from "./StockAdjuster.jsx";
 import LowStockAlert from "./LowStockAlert.jsx";
 
-export default function LowStockDashboard() {
-  const { products, loading, error, updateProduct } = useProducts();
+export default function LowStockDashboard({ products, loading, error, updateProduct }) {
   const [query, setQuery] = useState("");
 
   const lowStock = useMemo(() => {

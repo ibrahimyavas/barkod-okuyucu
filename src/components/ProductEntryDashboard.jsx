@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, Wallet, Plus, Pencil, Trash2, X, RefreshCw, Search, ScanBarcode } from "lucide-react";
-import { useProducts } from "../hooks/useProducts.js";
+import { Boxes, Wallet, Plus, Pencil, Trash2, X, RefreshCw, Search, ScanBarcode, TriangleAlert } from "lucide-react";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import { stockStatus } from "../lib/stock.js";
 import StockAdjuster from "./StockAdjuster.jsx";
@@ -32,8 +31,16 @@ function toFormShape(p) {
   };
 }
 
-export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill }) {
-  const { products, loading, error, addProduct, updateProduct, removeProduct } = useProducts();
+export default function ProductEntryDashboard({
+  prefillBarcode,
+  onConsumePrefill,
+  products,
+  loading,
+  error,
+  addProduct,
+  updateProduct,
+  removeProduct,
+}) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -52,6 +59,18 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
     const set = new Set(products.map((p) => p.kategori).filter(Boolean));
     return [...set].sort((a, b) => a.localeCompare(b, "tr"));
   }, [products]);
+
+  // "Stok ekledim ama hâlâ tükenmiş görünüyor" hatasının gerçek nedeni:
+  // aynı barkodla tekrar "Ürün Ekle" basmak yeni bir SATIR açıyordu - eski
+  // (stoksuz) kayıt olduğu gibi kalıp Düşük Stok'ta görünmeye devam
+  // ediyordu, kullanıcı farkında olmadan bir kopya oluşturuyordu. Barkod
+  // alanı mevcut bir ürünle eşleştiğinde (ve o ürünü zaten düzenlemiyorsak)
+  // bunu tespit edip kopya oluşturmak yerine düzenlemeye yönlendiriyoruz.
+  const barcodeConflict = useMemo(() => {
+    const code = form.barkod.trim();
+    if (!code || editingId) return null;
+    return products.find((p) => p.barkod === code) || null;
+  }, [form.barkod, editingId, products]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -87,6 +106,14 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
     const urunAdi = form.urunAdi.trim();
     if (!urunAdi) {
       setSubmitError("Ürün adı zorunlu.");
+      return;
+    }
+    if (barcodeConflict) {
+      // Sessizce kopya oluşturmak yerine reddet - kullanıcı zaten aşağıdaki
+      // uyarıdan "Bu ürünü düzenle"ye tıklayabilir.
+      setSubmitError(
+        `Bu barkod zaten "${barcodeConflict.urunAdi}" için kayıtlı. Kopya oluşturmamak için aşağıdaki "Bu ürünü düzenle" ile stoğu güncelleyin.`
+      );
       return;
     }
     setSubmitting(true);
@@ -150,6 +177,17 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
             placeholder="Taranan kod ya da elle girin"
           />
         </div>
+
+        {barcodeConflict && (
+          <p className="field-hint field-hint-warning field-wide">
+            <TriangleAlert size={13} />
+            Bu barkod zaten <strong>{barcodeConflict.urunAdi}</strong> için kayıtlı (stok:{" "}
+            {barcodeConflict.miktar ?? "-"} {barcodeConflict.birim || ""}).{" "}
+            <button type="button" className="link-btn" onClick={() => startEdit(barcodeConflict)}>
+              Bu ürünü düzenle
+            </button>
+          </p>
+        )}
 
         <div className="field">
           <label htmlFor="pf-ad">Ürün Adı *</label>

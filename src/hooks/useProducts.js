@@ -2,10 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchProducts, createProduct, deleteProduct, updateProduct as apiUpdateProduct } from "../lib/api.js";
 
 // Product list lives in D1 (via the Worker API), not localStorage - unlike
-// the scan queue, this is meant to be shared across devices.
-export function useProducts() {
+// the scan queue, this is meant to be shared across devices. Called once at
+// App level now (product data feeds both Ürün Girişi and Düşük Stok, plus
+// the nav badge) - `enabled` lets App.jsx defer the actual fetch until
+// after login, so a logged-out visitor never fires a doomed-to-401 request.
+export function useProducts(enabled = true) {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState(null);
 
   const reload = useCallback(async () => {
@@ -21,8 +24,9 @@ export function useProducts() {
   }, []);
 
   useEffect(() => {
-    reload();
-  }, [reload]);
+    if (enabled) reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, reload]);
 
   const addProduct = useCallback(
     async (product) => {

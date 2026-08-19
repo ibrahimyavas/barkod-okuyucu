@@ -204,12 +204,49 @@ body {
   background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 16px 12px;
+  transition: width 0.15s ease;
+}
+
+/* Küçültülmüş (yalnızca ikon) mod - bkz. App.jsx sidebarCollapsed. Tercih
+   localStorage'da kalıcı, diğer düzen tercihleriyle (hooks/useNavLayout.js)
+   aynı desen. */
+.sidebar.collapsed {
+  width: 64px;
+}
+
+.sidebar.collapsed .sidebar-link {
+  justify-content: center;
+  padding: 9px;
+}
+
+/* Doğrudan çocuk (>) seçici şart - aksi halde .nav-icon-wrap İÇİNDEKİ
+   .nav-badge de bir <span> olduğu için (nav-icon-wrap sınıfı taşımıyor)
+   yanlışlıkla gizlenir, rozet küçültülmüş modda hiç görünmezdi. */
+.sidebar.collapsed .sidebar-link > span:not(.nav-icon-wrap) {
+  display: none;
+}
+
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sidebar.collapsed .sidebar-top {
+  justify-content: center;
+}
+
+.sidebar-collapse-btn {
+  flex-shrink: 0;
 }
 
 .sidebar-brand {
   font-size: 1.1rem;
   font-weight: 700;
   padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .sidebar-nav {
@@ -243,6 +280,34 @@ body {
   background: var(--accent-dim);
   color: var(--accent-on-dim);
   font-weight: 600;
+}
+
+/* Nav ikonlarının üstüne binen kırmızı sayı rozeti (ör. Düşük Stok'ta kaç
+   ürün kritik) - hem üst sekme şeridinde hem sol menüde (daraltılmış hâl
+   dahil) kullanılıyor. Ürün stoğu güncellenince (App.jsx'te tek bir yerden
+   yönetilen products state'i sayesinde) aynı render'da kayboluyor. */
+.nav-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--panel);
 }
 
 .sidebar-footer {
@@ -540,6 +605,37 @@ body {
 
 .field-wide {
   grid-column: 1 / -1;
+}
+
+.field-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.field-hint-warning {
+  color: var(--warning-text);
+}
+
+.field-hint-warning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--warning);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .form-error {
