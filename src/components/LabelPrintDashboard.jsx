@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus, Trash2, Printer, Tag, Eye } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
+import { useDepoTransferleri } from "../hooks/useDepoTransferleri.js";
 import { useLabelQueue } from "../hooks/useLabelQueue.js";
 import { buildRoutePayload } from "../lib/qrPayload.js";
 import BarcodeLabel, { QR_SIZE_OPTIONS } from "./BarcodeLabel.jsx";
@@ -24,10 +25,12 @@ const EMPTY_FORM = { barkod: "", urunAdi: "", fiyat: "", format: "code_128", ner
 export default function LabelPrintDashboard() {
   const { products } = useProducts();
   const { sevkiyatlar } = useSevkiyatlar();
+  const { transferler } = useDepoTransferleri();
   const { items, addItem, updateCount, removeItem, clearAll } = useLabelQueue();
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedSevkiyatId, setSelectedSevkiyatId] = useState("");
+  const [selectedTransferId, setSelectedTransferId] = useState("");
   // Kuyruktaki bir etiketi büyük önizlemede görmek/tek başına yazdırmak için
   // - bkz. Modal.jsx. Doluyken yazdırma alanı SADECE bu etiketi içeriyor
   // (aşağıdaki printAreaEntries), kuyruğun geri kalanı etkilenmiyor.
@@ -59,6 +62,20 @@ export default function LabelPrintDashboard() {
         ...f,
         nereden: s.cikisKonumu || f.nereden,
         nereye: s.varisKonumu || f.nereye,
+      }));
+    }
+  }
+
+  // Aynı mantık, İç Lojistik'in depo/raf transferleri için - kaynak/hedef
+  // konumu nereden/nereye'ye eşliyor.
+  function pickTransfer(id) {
+    setSelectedTransferId(id);
+    const t = transferler.find((tr) => tr.id === id);
+    if (t) {
+      setForm((f) => ({
+        ...f,
+        nereden: t.kaynakKonum || f.nereden,
+        nereye: t.hedefKonum || f.nereye,
       }));
     }
   }
@@ -175,6 +192,18 @@ export default function LabelPrintDashboard() {
                 {sevkiyatlar.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.tarafAdi} ({s.cikisKonumu || "?"} → {s.varisKonumu || "?"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field field-wide">
+              <label htmlFor="lb-transfer-sec">İç Lojistik'ten güzergah doldur (opsiyonel)</label>
+              <select id="lb-transfer-sec" value={selectedTransferId} onChange={(e) => pickTransfer(e.target.value)}>
+                <option value="">— Elle gir —</option>
+                {transferler.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.urunAdi} ({t.kaynakKonum || "?"} → {t.hedefKonum || "?"})
                   </option>
                 ))}
               </select>
