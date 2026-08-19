@@ -4,6 +4,12 @@ import { resolveBarcodeDetector, DEFAULT_FORMATS } from "../lib/barcodeDetector.
 const REPEAT_COOLDOWN_MS = 1500; // ignore re-reads of the *same* code while it's still sitting in frame
 const FALLBACK_INTERVAL_MS = 66; // ~15fps, used only when requestVideoFrameCallback is unavailable (e.g. Firefox)
 
+// --- düşük ışık desteği (yalnızca cropRegion verilen mod, yani QR, için) --
+const BRIGHTNESS_CHECK_INTERVAL_MS = 250; // her karede ölçmeye gerek yok, ucuz olsa da
+const AUTO_TORCH_LUMA = 55; // 0-255 - bunun altı "karanlık, fenere ihtiyaç var" kabul edilir
+const AUTO_TORCH_HOLD_MS = 900; // ani gölgelerde (parmak, hızlı hareket) yanlışlıkla tetiklenmesin diye karanlığın bu süre kadar sürmesini bekle
+const ENHANCE_LUMA = 120; // bunun altında kırpılan kareye parlaklık/kontrast artışı uygulanır
+
 /**
  * Drives a <video> camera preview plus a continuous barcode-detection loop.
  * Detection runs once per real video frame via `requestVideoFrameCallback`
@@ -32,6 +38,11 @@ export function useCameraScanner({
   const cropRegionRef = useRef(cropRegion);
   cropRegionRef.current = cropRegion;
   const cropCanvasRef = useRef(null);
+  const brightnessCanvasRef = useRef(null); // 16x16 ölçüm için ayrı, ucuz canvas
+  const lastBrightnessCheckRef = useRef(0);
+  const avgLumaRef = useRef(255); // ölçülene kadar "aydınlık" varsay
+  const darkSinceRef = useRef(null);
+  const autoTorchTriedRef = useRef(false); // her akış (stream) başına en fazla bir kez otomatik fener dene
 
   const [devices, setDevices] = useState([]);
   const [activeDeviceId, setActiveDeviceId] = useState(null);
@@ -78,6 +89,33 @@ export function useCameraScanner({
     ctx.fillText(barcode.rawValue, pts[0].x * scaleX, Math.max(14, pts[0].y * scaleY - 8));
   }, []);
 
+  // Video karesinin ortalama parlaklığını ucuza ölçer: video'yu minik bir
+  // 16x16 canvas'a küçültüp okur (küçültme GPU'da ucuz, 256 pikseli okumak
+  // da öyle) - her karede değil, BRIGHTNESS_CHECK_INTERVAL_MS'de bir yapılır.
+  function sampleBrightness(video) {
+    const now = performance.now();
+    if (now - lastBrightnessCheckRef.current < BRIGHTNESS_CHECK_INTERVAL_MS) {
+      return avgLumaRef.current;
+    }
+    lastBrightnessCheckRef.current = now;
+    if (!brightnessCanvasRef.current) {
+      const c = document.createElement("canvas");
+      c.width = 16;
+      c.height = 16;
+      brightnessCanvasRef.current = c;
+    }
+    const c = brightnessCanvasRef.current;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, 16, 16);
+    const { data } = ctx.getImageData(0, 0, 16, 16);
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+    avgLumaRef.current = sum / (data.length / 4);
+    return avgLumaRef.current;
+  }
+
   // When cropRegion is set (QR mode), analyze a centered crop of the frame
   // instead of the whole 1920x1080 image, downscaled to a modest cap. WASM
   // decode time scales with pixel count, so this is a large, direct win for
@@ -112,7 +150,21 @@ export function useCameraScanner({
       canvas.width = outW;
       canvas.height = outH;
     }
-    canvas.getContext("2d", { willReadFrequently: true }).drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    // Düşük ışıkta kırpılan kareye parlaklık/kontrast artışı uygula - ne
+    // kadar karanlıksa artış o kadar güçlü, iyi ışıkta hiç dokunulmuyor
+    // (fazla parlak sahnede kontrast artışı beyazları patlatıp tam tersi
+    // zarar verebilir).
+    const luma = sampleBrightness(video);
+    if (luma < ENHANCE_LUMA) {
+      const t = Math.min(1, (ENHANCE_LUMA - luma) / ENHANCE_LUMA); // 0..1, karanlık arttıkça 1'e yaklaşır
+      ctx.filter = `brightness(${(1 + t * 0.6).toFixed(2)}) contrast(${(1 + t * 0.35).toFixed(2)})`;
+    } else {
+      ctx.filter = "none";
+    }
+
+    ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
     return canvas;
   }
 
@@ -129,6 +181,7 @@ export function useCameraScanner({
     busyRef.current = true;
     try {
       const source = getDetectSource(video);
+      maybeAutoTorch();
       const results = await detectorRef.current.detect(source);
       const best = results[0] || null;
       // Corner points from a cropped/scaled source are in that canvas's
@@ -151,6 +204,24 @@ export function useCameraScanner({
       schedule();
     }
   };
+
+  // Karanlıkta (QR modu, ayrıca cihazda fener varsa) fenerin otomatik
+  // açılmasını dener - kullanıcı fenere elle dokunmuş ya da bu akışta zaten
+  // bir kez denenmişse tekrar araya girmez.
+  function maybeAutoTorch() {
+    if (!cropRegionRef.current) return; // yalnızca QR modunda
+    if (!hasTorch || torchOn || autoTorchTriedRef.current) return;
+    const luma = avgLumaRef.current;
+    if (luma >= AUTO_TORCH_LUMA) {
+      darkSinceRef.current = null;
+      return;
+    }
+    if (darkSinceRef.current == null) darkSinceRef.current = Date.now();
+    if (Date.now() - darkSinceRef.current > AUTO_TORCH_HOLD_MS) {
+      autoTorchTriedRef.current = true; // her akış (stream) başına en fazla bir kez dene
+      toggleTorch();
+    }
+  }
 
   function schedule() {
     const video = videoRef.current;
@@ -219,6 +290,10 @@ export function useCameraScanner({
         trackRef.current = track;
         const caps = track?.getCapabilities?.() || {};
         setHasTorch(Boolean(caps.torch));
+        // Yeni akışta düşük-ışık ölçümünü/otomatik-fener denemesini sıfırla.
+        autoTorchTriedRef.current = false;
+        darkSinceRef.current = null;
+        avgLumaRef.current = 255;
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
