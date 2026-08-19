@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Volume2, VolumeX, Radio, Download, Trash2, Gauge, ScanLine, QrCode } from "lucide-react";
+import { Volume2, VolumeX, Radio, Download, Trash2, Gauge, ScanLine, QrCode, Bug } from "lucide-react";
 import { useScanStore } from "../hooks/useScanStore.js";
 import { useCameraScanner } from "../hooks/useCameraScanner.js";
 import { useKeyboardWedge } from "../hooks/useKeyboardWedge.js";
@@ -27,6 +27,10 @@ export default function ScannerView({ onSendToEntry }) {
   // "barkod" (varsayılan, dokunulmadı) vs "qr" - QR modu her zaman WASM
   // motorunu zorluyor, bkz. lib/barcodeDetector.js:resolveQrOnlyDetector.
   const [scanMode, setScanMode] = useState("barkod");
+  // "Hâlâ okumuyor" raporlarını teşhis etmek için: açıkken dedektöre giden
+  // ham kareyi küçük bir önizleme olarak gösteriyoruz - bulanıklık, yanlış
+  // kırpma, aşırı karanlık gibi sorunları tahmin yerine gözle görmek için.
+  const [debugOn, setDebugOn] = useState(false);
   // Kamera üstündeki yeşil flaş + "✓ kod" bandını tetikler - bkz.
   // CameraPanel.jsx. Asla null'a dönmüyor; her yeni tarama zamandamgasını
   // (key olarak kullanılıyor) güncelleyip CSS animasyonunu yeniden
@@ -71,6 +75,7 @@ export default function ScannerView({ onSendToEntry }) {
     formats: scanMode === "qr" ? QR_ONLY_FORMATS : DEFAULT_FORMATS,
     resolveDetector: scanMode === "qr" ? resolveQrOnlyDetector : undefined,
     cropRegion: scanMode === "qr" ? QR_CROP_REGION : null,
+    debug: debugOn,
     onDetect: handleCameraDetect,
   });
   useKeyboardWedge({ enabled: wedgeOn, slowDevice, onScan: handleWedgeScan });
@@ -119,6 +124,16 @@ export default function ScannerView({ onSendToEntry }) {
                 ? "Yerleşik dedektör"
                 : "WASM dedektör"}
         </span>
+        {scanMode === "qr" && (
+          <button
+            type="button"
+            className={`icon-btn labeled small ${debugOn ? "active" : ""}`}
+            onClick={() => setDebugOn((v) => !v)}
+            title="Dedektöre giden ham kareyi (kırpma + ışık düzeltmesi uygulanmış hâliyle) küçük bir önizlemede göster - okuma sorunlarını teşhis etmek için"
+          >
+            <Bug size={14} /> Teşhis
+          </button>
+        )}
       </div>
 
       <CameraPanel
@@ -127,6 +142,7 @@ export default function ScannerView({ onSendToEntry }) {
         onToggleCamera={() => setCameraOn((v) => !v)}
         scanMode={scanMode}
         lastHit={lastHit}
+        debugOn={debugOn}
       />
 
       <ManualEntry onAdd={handleManualAdd} />

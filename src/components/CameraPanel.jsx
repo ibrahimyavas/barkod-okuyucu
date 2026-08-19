@@ -1,6 +1,6 @@
 import { Camera, CameraOff, Zap, ZapOff, SwitchCamera } from "lucide-react";
 
-export default function CameraPanel({ camera, cameraOn, onToggleCamera, scanMode, lastHit }) {
+export default function CameraPanel({ camera, cameraOn, onToggleCamera, scanMode, lastHit, debugOn }) {
   const {
     videoRef,
     canvasRef,
@@ -12,6 +12,7 @@ export default function CameraPanel({ camera, cameraOn, onToggleCamera, scanMode
     toggleTorch,
     error,
     starting,
+    debugFrame,
   } = camera;
 
   const cycleCamera = () => {
@@ -39,6 +40,12 @@ export default function CameraPanel({ camera, cameraOn, onToggleCamera, scanMode
             )}
             {starting && <div className="camera-status">Kamera başlatılıyor…</div>}
             {error && <div className="camera-status camera-status-error">{error}</div>}
+            {debugOn && debugFrame && (
+              <div className="debug-frame-preview">
+                <span className="debug-frame-label">Dedektörün gördüğü kare</span>
+                <img src={debugFrame} alt="Dedektöre giden ham kare" />
+              </div>
+            )}
           </>
         ) : (
           <div className="camera-off">

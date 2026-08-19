@@ -750,6 +750,36 @@ select.status-badge {
   bottom: 20%;
 }
 
+/* "Teşhis" modu: dedektöre TAM OLARAK giden kareyi (kırpma + düşük ışık
+   güçlendirmesi uygulanmış hâliyle) küçük bir önizlemede gösterir - bkz.
+   useCameraScanner.js:getDetectSource. */
+.debug-frame-preview {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 34%;
+  max-width: 160px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 4px;
+  pointer-events: none;
+}
+
+.debug-frame-preview img {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+}
+
+.debug-frame-label {
+  display: block;
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 3px;
+  text-align: center;
+}
+
 .scan-flash {
   position: absolute;
   inset: 0;
@@ -852,6 +882,12 @@ select.status-badge {
   padding: 8px 10px;
   font-size: 0.85rem;
   cursor: pointer;
+}
+
+.icon-btn.small {
+  padding: 5px 8px;
+  font-size: 0.75rem;
+  border-radius: 8px;
 }
 
 .icon-btn:disabled {

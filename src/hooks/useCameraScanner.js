@@ -22,6 +22,7 @@ export function useCameraScanner({
   formats = DEFAULT_FORMATS,
   resolveDetector = resolveBarcodeDetector,
   cropRegion = null, // { widthPct, heightPct } - analyze only a centered region, downscaled, instead of the full frame
+  debug = false, // true: her ~400ms'de bir, dedektöre giden ham kareyi debugFrame olarak (data URL) dışa ver - teşhis içindir, üretimde kapalı
   onDetect,
 }) {
   const videoRef = useRef(null);
@@ -43,6 +44,7 @@ export function useCameraScanner({
   const avgLumaRef = useRef(255); // ölçülene kadar "aydınlık" varsay
   const darkSinceRef = useRef(null);
   const autoTorchTriedRef = useRef(false); // her akış (stream) başına en fazla bir kez otomatik fener dene
+  const lastDebugSnapshotRef = useRef(0);
 
   const [devices, setDevices] = useState([]);
   const [activeDeviceId, setActiveDeviceId] = useState(null);
@@ -51,6 +53,7 @@ export function useCameraScanner({
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
   const [usingNative, setUsingNative] = useState(null); // null = not resolved yet
+  const [debugFrame, setDebugFrame] = useState(null); // data URL - dedektöre giden son ham kare (yalnızca debug=true iken doldurulur)
 
   // A stable primitive to key the effect below on, instead of the `formats`
   // array itself - callers that pass a fresh array literal each render
@@ -165,6 +168,20 @@ export function useCameraScanner({
     }
 
     ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+
+    // Teşhis amaçlı: dedektöre TAM OLARAK giden pikselleri (kırpma + düşük
+    // ışık güçlendirmesi uygulanmış hâliyle) küçük aralıklarla dışa
+    // aktarıyoruz - "hâlâ okumuyor" raporlarında bulanıklık/yanlış
+    // kırpma/aşırı karanlık gibi sorunları tahmin yerine gözle görmek için.
+    // Yalnızca debug=true iken çalışır, normal kullanıcılar için hiç maliyeti yok.
+    if (debug) {
+      const now = performance.now();
+      if (now - lastDebugSnapshotRef.current > 400) {
+        lastDebugSnapshotRef.current = now;
+        setDebugFrame(canvas.toDataURL("image/jpeg", 0.7));
+      }
+    }
+
     return canvas;
   }
 
@@ -269,10 +286,27 @@ export function useCameraScanner({
     // the camera's own downscaling/compression. 1080p `ideal` asks for more
     // without breaking devices that only offer 720p (`ideal` just gets the
     // closest match).
+    //
+    // focusMode: "continuous" - QR kodları genelde barkoda göre daha yakın
+    // mesafeden okutuluyor; telefonun kamerası uzak mesafeye kilitli kalırsa
+    // (bazı cihazlarda varsayılan böyle olabiliyor) hiçbir dekode motoru
+    // bulanık bir kareyi okuyamaz. `ideal` olduğu için desteklemeyen
+    // tarayıcılarda (örn. iOS Safari - odak kontrolüne hiç izin vermiyor)
+    // sessizce yok sayılır, hata fırlatmaz.
     const constraints = {
       video: activeDeviceId
-        ? { deviceId: { exact: activeDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-        : { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        ? {
+            deviceId: { exact: activeDeviceId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: { ideal: "continuous" },
+          }
+        : {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: { ideal: "continuous" },
+          },
       audio: false,
     };
 
@@ -290,6 +324,13 @@ export function useCameraScanner({
         trackRef.current = track;
         const caps = track?.getCapabilities?.() || {};
         setHasTorch(Boolean(caps.torch));
+        // Bazı cihazlarda focusMode getUserMedia aşamasında değil, akış
+        // başladıktan sonra applyConstraints ile uygulanabiliyor - iki
+        // yoldan da deniyoruz, hangisi tutarsa. Desteklenmiyorsa sessizce
+        // yok sayılır (torch toggle'daki desenle aynı).
+        if (caps.focusMode?.includes?.("continuous")) {
+          track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+        }
         // Yeni akışta düşük-ışık ölçümünü/otomatik-fener denemesini sıfırla.
         autoTorchTriedRef.current = false;
         darkSinceRef.current = null;
@@ -346,5 +387,6 @@ export function useCameraScanner({
     error,
     starting,
     usingNative,
+    debugFrame,
   };
 }
