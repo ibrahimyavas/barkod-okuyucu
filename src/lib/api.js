@@ -98,6 +98,28 @@ export function deleteCariMovement(id) {
   return request(`/api/cari-hareketler/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchFaturaAyarlari() {
+  const data = await request("/api/fatura-ayarlari");
+  return data.settings;
+}
+
+export function updateFaturaAyarlari(settings) {
+  return request("/api/fatura-ayarlari", withJsonBody("PUT", settings));
+}
+
+export async function fetchFaturalar() {
+  const data = await request("/api/faturalar");
+  return data.faturalar;
+}
+
+export function createFatura(fatura) {
+  return request("/api/faturalar", withJsonBody("POST", fatura));
+}
+
+export function deleteFatura(id) {
+  return request(`/api/faturalar/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function login(password) {
   return request("/api/auth/login", withJsonBody("POST", { password }));
 }

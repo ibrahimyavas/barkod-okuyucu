@@ -745,6 +745,12 @@ body {
     border: 1px solid #000;
     break-inside: avoid;
   }
+  .fatura-page {
+    width: 100%;
+    max-width: none;
+    border: none;
+    padding: 0;
+  }
   @page {
     margin: 8mm;
   }
@@ -953,4 +959,127 @@ body {
 .diverging-bar-row:hover .diverging-bar-fill,
 .diverging-bar-row:focus-visible .diverging-bar-fill {
   filter: brightness(1.2);
+}
+
+/* ---- fatura / irsaliye ---------------------------------------------------- */
+
+.item-entry-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.6fr 0.9fr auto;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.item-entry-row input,
+.item-entry-row select {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+
+.item-entry-picker {
+  grid-column: 1 / -1;
+}
+
+.totals-preview {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+/* The document itself - styled to look like the printed page even in the
+   on-screen preview, so what you see is what you get. */
+.fatura-page {
+  background: #fff;
+  color: #111;
+  padding: 20px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  max-width: 480px;
+}
+
+.fatura-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #111;
+}
+
+.fatura-firma-adi {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.fatura-meta {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fatura-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.fatura-muhatap {
+  margin-bottom: 16px;
+}
+
+.fatura-muhatap-label {
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.fatura-muhatap-adi {
+  font-weight: 700;
+}
+
+.fatura-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.fatura-table th,
+.fatura-table td {
+  border-bottom: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.fatura-totals {
+  margin-left: auto;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fatura-totals > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.fatura-genel-toplam {
+  font-weight: 700;
+  border-top: 1px solid #111;
+  padding-top: 4px;
+}
+
+.fatura-not {
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: #555;
+  border-top: 1px dashed #ccc;
+  padding-top: 8px;
 }

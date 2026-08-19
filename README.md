@@ -49,6 +49,19 @@ sekmeler:
   backend/D1 gerekmedi - hepsi mevcut uçlardan istemci tarafında
   hesaplanıyor. Her grafik kartında bir "tablo olarak göster" düğmesi var
   (erişilebilirlik - hiçbir veri sadece grafiğe hapsolmuyor).
+- **Fatura:** Fatura ya da irsaliye kesme - Cari Hesap'tan muhatap seçip (ya
+  da elle girip), Ürün Girişi'nden kalem seçip (ya da elle girip) belge
+  oluşturur ve `window.print()` ile yazdırır. Evrak numaraları (`FTR-0001`,
+  `IRS-0001`...) fatura/irsaliye için ayrı sayaçlarla, D1'de atomik olarak
+  (`UPDATE ... RETURNING`) üretilir - reddedilen bir gönderim numara
+  harcamaz. Fatura'da (irsaliye'de değil) KDV oranı girip "tutarı bu cari
+  hesaba borç olarak işle" seçeneğiyle Cari Hesap'a otomatik borç kaydı
+  düşülebilir. Firma bilgileri (ad/adres/telefon/vergi no) ayarlar
+  panelinden bir kez girilir, her belgede kullanılır. Geçmiş bölümünden
+  eski belgeler yeniden yazdırılabilir - Satın Alma/Cari Hesap gibi D1'de
+  kalıcı, Etiket Bas'ın aksine. (Not: bir faturayı silmek, o faturayla
+  cari hesaba işlenmiş borç kaydını otomatik geri almaz - gerekirse Cari
+  Hesap'tan elle düzeltin.)
 
 ## Nasıl çalışır
 
