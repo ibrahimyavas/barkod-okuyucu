@@ -3,8 +3,10 @@ import { Boxes, Wallet, Plus, Pencil, Trash2, X, RefreshCw, Search, ScanBarcode,
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import { stockStatus } from "../lib/stock.js";
 import { findCatalogEntry } from "../lib/catalog.js";
+import { useScanStore } from "../hooks/useScanStore.js";
 import StockAdjuster from "./StockAdjuster.jsx";
 import DatePicker from "./DatePicker.jsx";
+import UncatalogedScansPanel from "./UncatalogedScansPanel.jsx";
 
 const EMPTY_FORM = {
   barkod: "",
@@ -43,6 +45,7 @@ export default function ProductEntryDashboard({
   removeProduct,
   catalog = [],
 }) {
+  const { scans } = useScanStore();
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -183,6 +186,15 @@ export default function ProductEntryDashboard({
           </div>
         </div>
       </div>
+
+      <UncatalogedScansPanel
+        scans={scans}
+        catalog={catalog}
+        onPick={(code) => {
+          setEditingId(null);
+          setForm((f) => ({ ...f, barkod: code }));
+        }}
+      />
 
       <form className="product-form" onSubmit={handleSubmit}>
         <div className="field">

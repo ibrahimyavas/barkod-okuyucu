@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { ClipboardList, ScanBarcode, Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { useScanStore } from "../hooks/useScanStore.js";
+import UncatalogedScansPanel from "./UncatalogedScansPanel.jsx";
 
 const EMPTY_FORM = { barkod: "", urunAdi: "", kategori: "", birim: "" };
 
@@ -17,6 +19,7 @@ function toFormShape(c) {
 // geliyor, bunu TEK bir yerde tanımlıyoruz. Stok/maliyet gibi hareket
 // verisi taşımıyor - yalnızca kimlik (bkz. lib/catalog.js, worker/urunKatalog.js).
 export default function UrunListesiDashboard({ catalog, loading, error, addEntry, updateEntry, removeEntry }) {
+  const { scans } = useScanStore();
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -106,6 +109,15 @@ export default function UrunListesiDashboard({ catalog, loading, error, addEntry
         Barkod-ürün eşlemesini burada bir kez tanımlayın - Ürün Girişi, Satın Alma ve Lojistik'te aynı barkodu
         yazdığınızda ürün adı (ve kategori/birim) otomatik dolar.
       </p>
+
+      <UncatalogedScansPanel
+        scans={scans}
+        catalog={catalog}
+        onPick={(code) => {
+          setEditingId(null);
+          setForm({ ...EMPTY_FORM, barkod: code });
+        }}
+      />
 
       <form className="product-form" onSubmit={handleSubmit}>
         <div className="field">
