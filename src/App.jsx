@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck, Sun, Moon, LogOut } from "lucide-react";
+import {
+  ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck,
+  Sun, Moon, PanelLeft, PanelTop, LogOut,
+} from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
+import { useNavLayout } from "./hooks/useNavLayout.js";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
@@ -29,6 +33,7 @@ const TABS = [
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
+  const { layout, toggleLayout } = useNavLayout();
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [view, setView] = useState("scanner");
@@ -64,21 +69,84 @@ export default function App() {
     return <LoginGate onSuccess={() => setAuthenticated(true)} />;
   }
 
+  const themeToggleBtn = (
+    <button
+      className="icon-btn"
+      onClick={toggleTheme}
+      title={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
+    >
+      {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+    </button>
+  );
+
+  const layoutToggleBtn = (
+    <button
+      className="icon-btn"
+      onClick={toggleLayout}
+      title={layout === "sidebar" ? "Üst sekme şeridine geç" : "Sol menüye geç"}
+    >
+      {layout === "sidebar" ? <PanelTop size={16} /> : <PanelLeft size={16} />}
+    </button>
+  );
+
+  const logoutBtn = (
+    <button className="icon-btn" onClick={handleLogout} title="Çıkış yap">
+      <LogOut size={16} />
+    </button>
+  );
+
+  const activeDashboard = (
+    <>
+      {view === "scanner" && <ScannerView onSendToEntry={handleSendToEntry} />}
+      {view === "products" && (
+        <ProductEntryDashboard prefillBarcode={prefillBarcode} onConsumePrefill={() => setPrefillBarcode(null)} />
+      )}
+      {view === "purchasing" && <PurchasingDashboard />}
+      {view === "cari" && <CariHesapDashboard />}
+      {view === "lowstock" && <LowStockDashboard />}
+      {view === "labels" && <LabelPrintDashboard />}
+      {view === "report" && <ReportDashboard />}
+      {view === "fatura" && <FaturaDashboard />}
+      {view === "lojistik" && <LojistikDashboard />}
+    </>
+  );
+
+  if (layout === "sidebar") {
+    return (
+      <div className="app-shell">
+        <aside className="sidebar">
+          <div className="sidebar-brand">Small ERP</div>
+          <nav className="sidebar-nav">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                className={`sidebar-link ${view === id ? "active" : ""}`}
+                onClick={() => setView(id)}
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-footer">
+            {layoutToggleBtn}
+            {themeToggleBtn}
+            {logoutBtn}
+          </div>
+        </aside>
+        <main className="main-content">{activeDashboard}</main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>Small ERP</h1>
         <div className="header-actions">
-          <button
-            className="icon-btn"
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
-          >
-            {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-          </button>
-          <button className="icon-btn" onClick={handleLogout} title="Çıkış yap">
-            <LogOut size={16} />
-          </button>
+          {layoutToggleBtn}
+          {themeToggleBtn}
+          {logoutBtn}
         </div>
       </header>
 
@@ -91,17 +159,7 @@ export default function App() {
         ))}
       </nav>
 
-      {view === "scanner" && <ScannerView onSendToEntry={handleSendToEntry} />}
-      {view === "products" && (
-        <ProductEntryDashboard prefillBarcode={prefillBarcode} onConsumePrefill={() => setPrefillBarcode(null)} />
-      )}
-      {view === "purchasing" && <PurchasingDashboard />}
-      {view === "cari" && <CariHesapDashboard />}
-      {view === "lowstock" && <LowStockDashboard />}
-      {view === "labels" && <LabelPrintDashboard />}
-      {view === "report" && <ReportDashboard />}
-      {view === "fatura" && <FaturaDashboard />}
-      {view === "lojistik" && <LojistikDashboard />}
+      {activeDashboard}
     </div>
   );
 }
