@@ -306,6 +306,18 @@ body {
   .main-content {
     padding: 12px 12px 32px;
   }
+
+  /* iOS/mobil tarayıcılar bir <input>/<select> 16px'ten küçük yazı boyutuyla
+     odaklanınca tüm sayfayı otomatik yakınlaştırıyor (klasik "ekran
+     büyüyor/bozuluyor" hissi) - kameradan bir kod okunduğunda liste/tablo
+     yeniden çizilirken bu form elemanlarından biri odakta kalmış olabilir.
+     Masaüstündeki daha sık/küçük görünümü bozmadan sadece mobil genişlikte
+     tümünü 16px'e sabitliyoruz. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 .detector-row {

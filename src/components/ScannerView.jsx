@@ -10,11 +10,13 @@ import CameraPanel from "./CameraPanel.jsx";
 import ScanTable from "./ScanTable.jsx";
 import ManualEntry from "./ManualEntry.jsx";
 
-// QR modunda tüm kareyi değil, ortadaki bu bölgeyi (aşağı ölçeklenmiş
-// olarak) analiz ediyoruz - WASM çözme süresi piksel sayısıyla orantılı,
-// bu da hem tepki hızını hem pratikte okuma başarısını belirgin şekilde
-// artırıyor. bkz. hooks/useCameraScanner.js:getDetectSource.
-const QR_CROP_REGION = { widthPct: 0.65, heightPct: 0.65 };
+// QR modunda tüm kareyi değil, ortadaki bu bölgeyi analiz ediyoruz - hem
+// gereksiz kenar alanını eleyip biraz hız kazandırıyor hem de kullanıcının
+// kodu tam ortalamasını gerektirmeyecek kadar geniş bir pay bırakıyor.
+// Artık agresif bir küçültme uygulanmıyor (bkz. useCameraScanner.js:
+// getDetectSource) - o yüzden bölgeyi dar tutmanın eskisi kadar hız
+// kazancı yok, güvenlik payını genişletmek daha değerli.
+const QR_CROP_REGION = { widthPct: 0.8, heightPct: 0.8 };
 
 export default function ScannerView({ onSendToEntry }) {
   const { scans, addScan, removeScan, clearAll, totalCount } = useScanStore();

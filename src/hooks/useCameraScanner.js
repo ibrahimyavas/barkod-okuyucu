@@ -94,7 +94,14 @@ export function useCameraScanner({
     const srcX = (video.videoWidth - srcW) / 2;
     const srcY = (video.videoHeight - srcH) / 2;
 
-    const maxDim = 640;
+    // Only cap pathologically large frames (e.g. a 4K camera) - zxing-wasm
+    // already runs its own adaptive tryHarder/tryDownscale passes internally,
+    // so pre-shrinking a normal-sized crop before handing it over only
+    // throws away pixel detail it could have used, especially for denser
+    // multi-line "route" QR payloads. A 1280px cap is a no-op for the common
+    // case (1920x1080 * 0.65 crop ≈ 1248x702) and only kicks in for genuinely
+    // oversized sources.
+    const maxDim = 1280;
     const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
     const outW = Math.max(1, Math.round(srcW * scale));
     const outH = Math.max(1, Math.round(srcH * scale));
@@ -105,7 +112,7 @@ export function useCameraScanner({
       canvas.width = outW;
       canvas.height = outH;
     }
-    canvas.getContext("2d").drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+    canvas.getContext("2d", { willReadFrequently: true }).drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
     return canvas;
   }
 
