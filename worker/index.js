@@ -7,6 +7,8 @@ import { handleAuthRoute, requireAuth } from "./auth.js";
 import { handleProductsRoute } from "./products.js";
 import { handleUrunKatalogRoute } from "./urunKatalog.js";
 import { handleSatisFiyatlariRoute } from "./satisFiyatlari.js";
+import { handleModulAyarlariRoute } from "./modulAyarlari.js";
+import { handleDepoTransferleriRoute } from "./depoTransferleri.js";
 import { handlePurchasesRoute } from "./purchases.js";
 import { handleCariRoute } from "./cari.js";
 import { handleFaturaRoute } from "./fatura.js";
@@ -29,6 +31,12 @@ async function handleApi(request, env, url) {
 
   const satisFiyatlariResponse = await handleSatisFiyatlariRoute(request, env, url.pathname);
   if (satisFiyatlariResponse) return satisFiyatlariResponse;
+
+  const modulAyarlariResponse = await handleModulAyarlariRoute(request, env, url.pathname);
+  if (modulAyarlariResponse) return modulAyarlariResponse;
+
+  const depoTransferleriResponse = await handleDepoTransferleriRoute(request, env, url.pathname);
+  if (depoTransferleriResponse) return depoTransferleriResponse;
 
   const purchasesResponse = await handlePurchasesRoute(request, env, url.pathname);
   if (purchasesResponse) return purchasesResponse;

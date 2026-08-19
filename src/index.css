@@ -1189,6 +1189,49 @@ select.status-badge {
   display: flex;
 }
 
+.module-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.module-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.module-settings-row:last-child {
+  border-bottom: none;
+}
+
+.module-settings-row:hover {
+  background: var(--panel-2);
+}
+
+.module-settings-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.module-settings-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .satis-checkout {
   display: flex;
   flex-direction: column;

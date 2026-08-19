@@ -183,6 +183,32 @@ export function deleteSevkiyat(id) {
   return request(`/api/sevkiyatlar/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchModulAyarlari() {
+  const data = await request("/api/modul-ayarlari");
+  return data.items;
+}
+
+export function setModulAyari(modulId, aktif) {
+  return request(`/api/modul-ayarlari/${encodeURIComponent(modulId)}`, withJsonBody("PUT", { aktif }));
+}
+
+export async function fetchDepoTransferleri() {
+  const data = await request("/api/depo-transferleri");
+  return data.transferler;
+}
+
+export function createDepoTransfer(transfer) {
+  return request("/api/depo-transferleri", withJsonBody("POST", transfer));
+}
+
+export function updateDepoTransfer(id, fields) {
+  return request(`/api/depo-transferleri/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
+export function deleteDepoTransfer(id) {
+  return request(`/api/depo-transferleri/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function login(password) {
   return request("/api/auth/login", withJsonBody("POST", { password }));
 }

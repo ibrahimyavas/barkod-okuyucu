@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScanLine, ClipboardList, PackagePlus, Tags, ShoppingBag, ShoppingCart, Landmark, AlertTriangle, Tag,
-  LayoutDashboard, FileText, Truck, Sun, Moon, PanelLeft, PanelTop, PanelLeftClose, PanelLeftOpen, LogOut,
+  LayoutDashboard, FileText, Truck, Warehouse, Settings, Sun, Moon, PanelLeft, PanelTop, PanelLeftClose,
+  PanelLeftOpen, LogOut,
 } from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
 import { useNavLayout } from "./hooks/useNavLayout.js";
 import { useProducts } from "./hooks/useProducts.js";
 import { useUrunKatalog } from "./hooks/useUrunKatalog.js";
 import { useSatisFiyatlari } from "./hooks/useSatisFiyatlari.js";
+import { useModulAyarlari } from "./hooks/useModulAyarlari.js";
 import { isLowStock } from "./lib/stock.js";
 import ScannerView from "./components/ScannerView.jsx";
 import UrunListesiDashboard from "./components/UrunListesiDashboard.jsx";
@@ -21,6 +23,8 @@ import LabelPrintDashboard from "./components/LabelPrintDashboard.jsx";
 import ReportDashboard from "./components/ReportDashboard.jsx";
 import FaturaDashboard from "./components/FaturaDashboard.jsx";
 import LojistikDashboard from "./components/LojistikDashboard.jsx";
+import IcLojistikDashboard from "./components/IcLojistikDashboard.jsx";
+import AyarlarDashboard from "./components/AyarlarDashboard.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
 
@@ -28,7 +32,9 @@ import { fetchAuthStatus, logout } from "./lib/api.js";
 // need to change as the module list grows. "catalog" oturuyor Tarayıcı ile
 // Ürün Girişi arasında - kullanıcının "ara ekran" isteği tam olarak bu konum.
 // "satisFiyatlari"/"satis" da aynı mantıkla stok (products) ile satış
-// arasında oturuyor.
+// arasında oturuyor. Her modül Ayarlar'dan açılıp kapatılabiliyor (bkz.
+// hooks/useModulAyarlari.js) - "settings" kasıtlı olarak burada değil,
+// ayrı ve daima görünür tutuluyor (bkz. aşağıdaki SETTINGS_TAB).
 const TABS = [
   { id: "scanner", label: "Tarayıcı", icon: ScanLine },
   { id: "catalog", label: "Ürün Listesi", icon: ClipboardList },
@@ -42,7 +48,10 @@ const TABS = [
   { id: "report", label: "Rapor", icon: LayoutDashboard },
   { id: "fatura", label: "Fatura", icon: FileText },
   { id: "lojistik", label: "Lojistik", icon: Truck },
+  { id: "icLojistik", label: "İç Lojistik", icon: Warehouse },
 ];
+
+const SETTINGS_TAB = { id: "settings", label: "Ayarlar", icon: Settings };
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -66,7 +75,12 @@ export default function App() {
   // ekranının barkod okutunca fiyat bulabilmesi için burada da lazım.
   const { fiyatlar, loading: fiyatlarLoading, error: fiyatlarError, addFiyat, updateFiyat, removeFiyat } =
     useSatisFiyatlari(authenticated);
+  // Hangi modüllerin menüde görüneceği (bkz. hooks/useModulAyarlari.js) -
+  // Ayarlar ekranından admin tarafından yönetiliyor.
+  const { isModuleEnabled, toggleModule } = useModulAyarlari(authenticated);
   const lowStockCount = useMemo(() => products.filter(isLowStock).length, [products]);
+  const visibleTabs = useMemo(() => TABS.filter((t) => isModuleEnabled(t.id)), [isModuleEnabled]);
+  const navTabs = useMemo(() => [...visibleTabs, SETTINGS_TAB], [visibleTabs]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem("barkod:sidebarCollapsed") === "1";
@@ -81,6 +95,16 @@ export default function App() {
       .catch(() => setAuthenticated(false))
       .finally(() => setAuthChecked(true));
   }, []);
+
+  // Admin şu an açık olan sekmeyi Ayarlar'dan kapatırsa (ör. başka bir
+  // cihazda/sekmede), menüde olmayan bir görünümde kilitli kalınmasın diye
+  // ilk görünür sekmeye yönlendir. "settings" zaten her zaman görünür.
+  useEffect(() => {
+    if (view === "settings") return;
+    if (navTabs.some((t) => t.id === view)) return;
+    if (visibleTabs.length > 0) setView(visibleTabs[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navTabs]);
 
   // "Ürün girişine aktar" on a scanned row switches tabs and drops the code
   // straight into the product form.
@@ -196,6 +220,10 @@ export default function App() {
       {view === "report" && <ReportDashboard />}
       {view === "fatura" && <FaturaDashboard />}
       {view === "lojistik" && <LojistikDashboard catalog={catalog} />}
+      {view === "icLojistik" && <IcLojistikDashboard catalog={catalog} />}
+      {view === "settings" && (
+        <AyarlarDashboard modules={TABS} isModuleEnabled={isModuleEnabled} toggleModule={toggleModule} />
+      )}
     </>
   );
 
@@ -214,7 +242,7 @@ export default function App() {
             </button>
           </div>
           <nav className="sidebar-nav">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {navTabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 className={`sidebar-link ${view === id ? "active" : ""}`}
@@ -252,7 +280,7 @@ export default function App() {
       </header>
 
       <nav className="tab-nav">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {navTabs.map(({ id, label, icon: Icon }) => (
           <button key={id} className={`tab-btn ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
             <span className="nav-icon-wrap">
               <Icon size={16} />
