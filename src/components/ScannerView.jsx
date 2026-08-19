@@ -103,7 +103,7 @@ export default function ScannerView({ onSendToEntry }) {
           className="detector-badge"
           title={
             scanMode === "qr"
-              ? "QR modu her zaman güvenilir yazılımsal (WASM) dedektörü kullanır"
+              ? "QR modu her zaman hafif, hızlı yazılımsal (jsQR) dedektörü kullanır"
               : camera.usingNative == null
                 ? "Dedektör hazırlanıyor…"
                 : camera.usingNative
@@ -112,7 +112,7 @@ export default function ScannerView({ onSendToEntry }) {
           }
         >
           {scanMode === "qr"
-            ? "WASM dedektör (QR)"
+            ? "Hızlı QR dedektörü"
             : camera.usingNative == null
               ? "Dedektör hazırlanıyor…"
               : camera.usingNative

@@ -73,10 +73,19 @@ export const QR_ONLY_FORMATS = ["qr_code"];
 // getSupportedFormats() reporting "qr_code" doesn't guarantee the native
 // implementation actually decodes QR reliably in practice - we've seen
 // devices where it passes that check but real-world QR reads still fail
-// while the WASM engine handles the exact same code fine. Since native's
-// whole appeal is speed on formats it demonstrably gets right, and this is a
-// single-format, low-volume scan mode anyway, it isn't worth the same
-// capability gamble: QR mode always uses the WASM engine, unconditionally.
-export function resolveQrOnlyDetector() {
-  return Promise.resolve({ Impl: PonyfillBarcodeDetector, usingNative: false });
+// while a software engine handles the exact same code fine. So QR mode
+// never uses native, regardless of what it claims to support.
+//
+// It also doesn't use the zxing-wasm engine used elsewhere in this file:
+// that engine's exhaustive tryHarder/tryRotate/tryInvert passes (plus its
+// ~1MB WASM binary having to load and boot on first use) made QR mode
+// noticeably slow in practice. jsQR is a lightweight pure-JS, single-pass
+// decoder - see lib/jsQrDetector.js for the detailed tradeoff reasoning.
+//
+// Dynamically imported (rather than imported at the top of this file) so
+// jsQR's code only downloads when someone actually switches to QR mode -
+// barcode-only sessions (the common case) don't pay for it.
+export async function resolveQrOnlyDetector() {
+  const { JsQrDetector } = await import("./jsQrDetector.js");
+  return { Impl: JsQrDetector, usingNative: false };
 }
