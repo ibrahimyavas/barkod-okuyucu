@@ -3,6 +3,7 @@ import { Truck, PackageCheck, AlertTriangle, Plus, Pencil, Trash2, X, Search } f
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { todayISO, trDate, isPastDate, groupByDate } from "../lib/format.js";
+import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_FORM = {
   yon: "giden",
@@ -199,12 +200,7 @@ export default function LojistikDashboard() {
 
         <div className="field">
           <label htmlFor="lj-tarih">Planlanan Tarih</label>
-          <input
-            id="lj-tarih"
-            type="date"
-            value={form.planlananTarih}
-            onChange={(e) => updateField("planlananTarih", e.target.value)}
-          />
+          <DatePicker id="lj-tarih" value={form.planlananTarih} onChange={(v) => updateField("planlananTarih", v)} />
         </div>
 
         <div className="field">

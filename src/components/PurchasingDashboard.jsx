@@ -3,6 +3,7 @@ import { Wallet, Clock, Users, Plus, Pencil, Trash2, X, Search, ChevronDown } fr
 import { useSuppliers } from "../hooks/useSuppliers.js";
 import { usePurchases } from "../hooks/usePurchases.js";
 import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
+import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_PURCHASE = {
   supplierId: "",
@@ -399,7 +400,7 @@ export default function PurchasingDashboard() {
 
         <div className="field">
           <label htmlFor="pu-tarih">Tarih</label>
-          <input id="pu-tarih" type="date" value={form.tarih} onChange={(e) => updateField("tarih", e.target.value)} />
+          <DatePicker id="pu-tarih" value={form.tarih} onChange={(v) => updateField("tarih", v)} />
         </div>
 
         <div className="field field-wide">

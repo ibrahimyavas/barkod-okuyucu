@@ -3,6 +3,7 @@ import { Landmark, Plus, Pencil, Trash2, X, Search, ArrowLeft } from "lucide-rea
 import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { useCariMovements } from "../hooks/useCariMovements.js";
 import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
+import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_ACCOUNT = { ad: "", tur: "musteri", telefon: "", adres: "" };
 const EMPTY_MOVEMENT = { tur: "borc", tutar: "", aciklama: "", tarih: todayISO() };
@@ -180,11 +181,10 @@ export default function CariHesapDashboard() {
           </div>
           <div className="field">
             <label htmlFor="mv-tarih">Tarih</label>
-            <input
+            <DatePicker
               id="mv-tarih"
-              type="date"
               value={moveForm.tarih}
-              onChange={(e) => setMoveForm((f) => ({ ...f, tarih: e.target.value }))}
+              onChange={(v) => setMoveForm((f) => ({ ...f, tarih: v }))}
             />
           </div>
           <div className="field field-wide">

@@ -6,6 +6,7 @@ import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { useProducts } from "../hooks/useProducts.js";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import FaturaDocument from "./FaturaDocument.jsx";
+import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_FORM = {
   tur: "fatura",
@@ -202,12 +203,7 @@ export default function FaturaDashboard() {
 
         <div className="field">
           <label htmlFor="fd-tarih">Tarih</label>
-          <input
-            id="fd-tarih"
-            type="date"
-            value={form.tarih}
-            onChange={(e) => setForm((f) => ({ ...f, tarih: e.target.value }))}
-          />
+          <DatePicker id="fd-tarih" value={form.tarih} onChange={(v) => setForm((f) => ({ ...f, tarih: v }))} />
         </div>
 
         <div className="field field-wide">

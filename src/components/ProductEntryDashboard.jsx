@@ -4,6 +4,7 @@ import { useProducts } from "../hooks/useProducts.js";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import { stockStatus } from "../lib/stock.js";
 import StockAdjuster from "./StockAdjuster.jsx";
+import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_FORM = {
   barkod: "",
@@ -190,12 +191,7 @@ export default function ProductEntryDashboard({ prefillBarcode, onConsumePrefill
 
         <div className="field">
           <label htmlFor="pf-tarih">Alınış Tarihi</label>
-          <input
-            id="pf-tarih"
-            type="date"
-            value={form.alinisTarihi}
-            onChange={(e) => updateField("alinisTarihi", e.target.value)}
-          />
+          <DatePicker id="pf-tarih" value={form.alinisTarihi} onChange={(v) => updateField("alinisTarihi", v)} />
         </div>
 
         <div className="field">
