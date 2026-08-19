@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScanLine, ClipboardList, PackagePlus, Tags, ShoppingBag, ShoppingCart, Landmark, AlertTriangle, Tag,
-  LayoutDashboard, FileText, Truck, Warehouse, Settings, Sun, Moon, PanelLeft, PanelTop, PanelLeftClose,
-  PanelLeftOpen, LogOut,
+  LayoutDashboard, FileText, Truck, Warehouse, Building2, Users, Settings, Sun, Moon, PanelLeft, PanelTop,
+  PanelLeftClose, PanelLeftOpen, LogOut,
 } from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
 import { useNavLayout } from "./hooks/useNavLayout.js";
@@ -10,6 +10,8 @@ import { useProducts } from "./hooks/useProducts.js";
 import { useUrunKatalog } from "./hooks/useUrunKatalog.js";
 import { useSatisFiyatlari } from "./hooks/useSatisFiyatlari.js";
 import { useModulAyarlari } from "./hooks/useModulAyarlari.js";
+import { useSuppliers } from "./hooks/useSuppliers.js";
+import { useCustomers } from "./hooks/useCustomers.js";
 import { isLowStock } from "./lib/stock.js";
 import ScannerView from "./components/ScannerView.jsx";
 import UrunListesiDashboard from "./components/UrunListesiDashboard.jsx";
@@ -17,6 +19,8 @@ import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import SatisFiyatlariDashboard from "./components/SatisFiyatlariDashboard.jsx";
 import SatisDashboard from "./components/SatisDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
+import TedarikcilerDashboard from "./components/TedarikcilerDashboard.jsx";
+import MusterilerDashboard from "./components/MusterilerDashboard.jsx";
 import CariHesapDashboard from "./components/CariHesapDashboard.jsx";
 import LowStockDashboard from "./components/LowStockDashboard.jsx";
 import LabelPrintDashboard from "./components/LabelPrintDashboard.jsx";
@@ -29,27 +33,35 @@ import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
 
 // Each new dashboard just needs an entry here - App.jsx doesn't otherwise
-// need to change as the module list grows. "catalog" oturuyor Tarayıcı ile
-// Ürün Girişi arasında - kullanıcının "ara ekran" isteği tam olarak bu konum.
-// "satisFiyatlari"/"satis" da aynı mantıkla stok (products) ile satış
-// arasında oturuyor. Her modül Ayarlar'dan açılıp kapatılabiliyor (bkz.
-// hooks/useModulAyarlari.js) - "settings" kasıtlı olarak burada değil,
-// ayrı ve daima görünür tutuluyor (bkz. aşağıdaki SETTINGS_TAB).
+// need to change as the module list grows. Her modül Ayarlar'dan açılıp
+// kapatılabiliyor (bkz. hooks/useModulAyarlari.js) - "settings" kasıtlı
+// olarak burada değil, ayrı ve daima görünür tutuluyor (bkz. aşağıdaki
+// SETTINGS_TAB).
+//
+// `group`: "operasyon" (günlük kullanım - taranan/satılan/izlenen) vs
+// "tanimlama" (saf veri girişi - ürün/tedarikçi/müşteri/fiyat tanımlama).
+// Operasyon önce, daha kolay erişilebilir olsun diye (bkz. GROUP_ORDER,
+// menüde grup başlıklarıyla ayrılıyor - bkz. aşağıdaki nav render).
 const TABS = [
-  { id: "scanner", label: "Tarayıcı", icon: ScanLine },
-  { id: "catalog", label: "Ürün Listesi", icon: ClipboardList },
-  { id: "products", label: "Ürün Girişi", icon: PackagePlus },
-  { id: "satisFiyatlari", label: "Satış Fiyatları", icon: Tags },
-  { id: "satis", label: "Satış", icon: ShoppingBag },
-  { id: "purchasing", label: "Satın Alma", icon: ShoppingCart },
-  { id: "cari", label: "Cari Hesap", icon: Landmark },
-  { id: "lowstock", label: "Düşük Stok", icon: AlertTriangle },
-  { id: "labels", label: "Etiket Bas", icon: Tag },
-  { id: "report", label: "Rapor", icon: LayoutDashboard },
-  { id: "fatura", label: "Fatura", icon: FileText },
-  { id: "lojistik", label: "Lojistik", icon: Truck },
-  { id: "icLojistik", label: "İç Lojistik", icon: Warehouse },
+  { id: "scanner", label: "Tarayıcı", icon: ScanLine, group: "operasyon" },
+  { id: "satis", label: "Satış", icon: ShoppingBag, group: "operasyon" },
+  { id: "purchasing", label: "Satın Alma", icon: ShoppingCart, group: "operasyon" },
+  { id: "cari", label: "Cari Hesap", icon: Landmark, group: "operasyon" },
+  { id: "lowstock", label: "Düşük Stok", icon: AlertTriangle, group: "operasyon" },
+  { id: "labels", label: "Etiket Bas", icon: Tag, group: "operasyon" },
+  { id: "report", label: "Rapor", icon: LayoutDashboard, group: "operasyon" },
+  { id: "fatura", label: "Fatura", icon: FileText, group: "operasyon" },
+  { id: "lojistik", label: "Lojistik", icon: Truck, group: "operasyon" },
+  { id: "icLojistik", label: "İç Lojistik", icon: Warehouse, group: "operasyon" },
+  { id: "catalog", label: "Ürün Listesi", icon: ClipboardList, group: "tanimlama" },
+  { id: "products", label: "Ürün Girişi", icon: PackagePlus, group: "tanimlama" },
+  { id: "satisFiyatlari", label: "Satış Fiyatları", icon: Tags, group: "tanimlama" },
+  { id: "suppliers", label: "Tedarikçiler", icon: Building2, group: "tanimlama" },
+  { id: "customers", label: "Müşteriler", icon: Users, group: "tanimlama" },
 ];
+
+const GROUP_LABELS = { operasyon: "Operasyon", tanimlama: "Tanımlama" };
+const GROUP_ORDER = ["operasyon", "tanimlama"];
 
 const SETTINGS_TAB = { id: "settings", label: "Ayarlar", icon: Settings };
 
@@ -78,9 +90,26 @@ export default function App() {
   // Hangi modüllerin menüde görüneceği (bkz. hooks/useModulAyarlari.js) -
   // Ayarlar ekranından admin tarafından yönetiliyor.
   const { isModuleEnabled, toggleModule } = useModulAyarlari(authenticated);
+  // Tedarikçiler (alış) / Müşteriler (satış) - tek yerden çekilip Satın
+  // Alma, Satış, Fatura ve Lojistik'e prop olarak veriliyor: birinde
+  // tanımlanan şirket diğerlerinde otomatik seçenek olarak çıkıyor.
+  const { suppliers, loading: suppliersLoading, error: suppliersError, addSupplier, editSupplier, removeSupplier } =
+    useSuppliers();
+  const { customers, loading: customersLoading, error: customersError, addCustomer, editCustomer, removeCustomer } =
+    useCustomers();
   const lowStockCount = useMemo(() => products.filter(isLowStock).length, [products]);
   const visibleTabs = useMemo(() => TABS.filter((t) => isModuleEnabled(t.id)), [isModuleEnabled]);
   const navTabs = useMemo(() => [...visibleTabs, SETTINGS_TAB], [visibleTabs]);
+  // Menüde iki bölüm - Operasyon (üstte, öncelikli) ve Tanımlama (altta) -
+  // bkz. TABS'taki `group` alanı. Boş kalan grup (hepsi kapatılmışsa)
+  // basitçe atlanıyor.
+  const navGroups = useMemo(
+    () =>
+      GROUP_ORDER.map((g) => ({ id: g, label: GROUP_LABELS[g], tabs: visibleTabs.filter((t) => t.group === g) })).filter(
+        (g) => g.tabs.length > 0
+      ),
+    [visibleTabs]
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem("barkod:sidebarCollapsed") === "1";
@@ -205,8 +234,28 @@ export default function App() {
           products={products}
         />
       )}
-      {view === "satis" && <SatisDashboard fiyatlar={fiyatlar} products={products} />}
-      {view === "purchasing" && <PurchasingDashboard catalog={catalog} />}
+      {view === "satis" && <SatisDashboard fiyatlar={fiyatlar} products={products} customers={customers} />}
+      {view === "purchasing" && <PurchasingDashboard catalog={catalog} suppliers={suppliers} />}
+      {view === "suppliers" && (
+        <TedarikcilerDashboard
+          suppliers={suppliers}
+          loading={suppliersLoading}
+          error={suppliersError}
+          addSupplier={addSupplier}
+          editSupplier={editSupplier}
+          removeSupplier={removeSupplier}
+        />
+      )}
+      {view === "customers" && (
+        <MusterilerDashboard
+          customers={customers}
+          loading={customersLoading}
+          error={customersError}
+          addCustomer={addCustomer}
+          editCustomer={editCustomer}
+          removeCustomer={removeCustomer}
+        />
+      )}
       {view === "cari" && <CariHesapDashboard />}
       {view === "lowstock" && (
         <LowStockDashboard
@@ -218,8 +267,8 @@ export default function App() {
       )}
       {view === "labels" && <LabelPrintDashboard />}
       {view === "report" && <ReportDashboard />}
-      {view === "fatura" && <FaturaDashboard />}
-      {view === "lojistik" && <LojistikDashboard catalog={catalog} />}
+      {view === "fatura" && <FaturaDashboard suppliers={suppliers} customers={customers} />}
+      {view === "lojistik" && <LojistikDashboard catalog={catalog} suppliers={suppliers} customers={customers} />}
       {view === "icLojistik" && <IcLojistikDashboard catalog={catalog} />}
       {view === "settings" && (
         <AyarlarDashboard modules={TABS} isModuleEnabled={isModuleEnabled} toggleModule={toggleModule} />
@@ -242,20 +291,37 @@ export default function App() {
             </button>
           </div>
           <nav className="sidebar-nav">
-            {navTabs.map(({ id, label, icon: Icon }) => (
+            {navGroups.map((g) => (
+              <div key={g.id} className="sidebar-nav-group">
+                {!sidebarCollapsed && <div className="sidebar-group-label">{g.label}</div>}
+                {g.tabs.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    className={`sidebar-link ${view === id ? "active" : ""}`}
+                    onClick={() => setView(id)}
+                    title={sidebarCollapsed ? label : undefined}
+                  >
+                    <span className="nav-icon-wrap">
+                      <Icon size={18} />
+                      {id === "lowstock" && lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
+                    </span>
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div className="sidebar-nav-group sidebar-nav-group-settings">
               <button
-                key={id}
-                className={`sidebar-link ${view === id ? "active" : ""}`}
-                onClick={() => setView(id)}
-                title={sidebarCollapsed ? label : undefined}
+                className={`sidebar-link ${view === "settings" ? "active" : ""}`}
+                onClick={() => setView("settings")}
+                title={sidebarCollapsed ? "Ayarlar" : undefined}
               >
                 <span className="nav-icon-wrap">
-                  <Icon size={18} />
-                  {id === "lowstock" && lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
+                  <Settings size={18} />
                 </span>
-                <span>{label}</span>
+                <span>Ayarlar</span>
               </button>
-            ))}
+            </div>
           </nav>
           <div className="sidebar-footer">
             {layoutToggleBtn}
@@ -280,15 +346,32 @@ export default function App() {
       </header>
 
       <nav className="tab-nav">
-        {navTabs.map(({ id, label, icon: Icon }) => (
-          <button key={id} className={`tab-btn ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
-            <span className="nav-icon-wrap">
-              <Icon size={16} />
-              {id === "lowstock" && lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
-            </span>
-            {label}
-          </button>
+        {navGroups.map((g, gi) => (
+          <Fragment key={g.id}>
+            {g.tabs.map(({ id, label, icon: Icon }, i) => (
+              <button
+                key={id}
+                className={`tab-btn ${view === id ? "active" : ""} ${gi > 0 && i === 0 ? "tab-group-start" : ""}`}
+                onClick={() => setView(id)}
+              >
+                <span className="nav-icon-wrap">
+                  <Icon size={16} />
+                  {id === "lowstock" && lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
+                </span>
+                {label}
+              </button>
+            ))}
+          </Fragment>
         ))}
+        <button
+          className={`tab-btn tab-group-start ${view === "settings" ? "active" : ""}`}
+          onClick={() => setView("settings")}
+        >
+          <span className="nav-icon-wrap">
+            <Settings size={16} />
+          </span>
+          Ayarlar
+        </button>
       </nav>
 
       {activeDashboard}

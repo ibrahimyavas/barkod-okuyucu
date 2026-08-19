@@ -9,6 +9,7 @@ import { handleUrunKatalogRoute } from "./urunKatalog.js";
 import { handleSatisFiyatlariRoute } from "./satisFiyatlari.js";
 import { handleModulAyarlariRoute } from "./modulAyarlari.js";
 import { handleDepoTransferleriRoute } from "./depoTransferleri.js";
+import { handleCustomersRoute } from "./customers.js";
 import { handlePurchasesRoute } from "./purchases.js";
 import { handleCariRoute } from "./cari.js";
 import { handleFaturaRoute } from "./fatura.js";
@@ -37,6 +38,9 @@ async function handleApi(request, env, url) {
 
   const depoTransferleriResponse = await handleDepoTransferleriRoute(request, env, url.pathname);
   if (depoTransferleriResponse) return depoTransferleriResponse;
+
+  const customersResponse = await handleCustomersRoute(request, env, url.pathname);
+  if (customersResponse) return customersResponse;
 
   const purchasesResponse = await handlePurchasesRoute(request, env, url.pathname);
   if (purchasesResponse) return purchasesResponse;

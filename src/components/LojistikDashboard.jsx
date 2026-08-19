@@ -63,7 +63,7 @@ function toFormShape(s) {
   };
 }
 
-export default function LojistikDashboard({ catalog = [] }) {
+export default function LojistikDashboard({ catalog = [], suppliers = [], customers = [] }) {
   const { sevkiyatlar, loading, error, addSevkiyat, updateOne, removeSevkiyat } = useSevkiyatlar();
   const { accounts } = useCariAccounts();
 
@@ -104,6 +104,13 @@ export default function LojistikDashboard({ catalog = [] }) {
   function pickCari(id) {
     const acc = accounts.find((a) => a.id === id);
     setForm((f) => ({ ...f, cariId: id, tarafAdi: acc?.ad || f.tarafAdi }));
+  }
+
+  // "Giden" (müşteriye) -> Müşteriler'den, "gelen" (tedarikçiden) ->
+  // Tedarikçiler'den seçim - yön'e göre otomatik olarak doğru liste
+  // sunulur. Cari Hesap seçici de ayrıca duruyor (borç/alacak takibi için).
+  function pickMusteri(ad) {
+    setForm((f) => ({ ...f, tarafAdi: ad || f.tarafAdi }));
   }
 
   function updateField(field, value) {
@@ -240,6 +247,32 @@ export default function LojistikDashboard({ catalog = [] }) {
             ))}
           </select>
         </div>
+
+        {form.yon === "giden" ? (
+          <div className="field">
+            <label htmlFor="lj-musteri">Müşteri'den seç (opsiyonel)</label>
+            <select id="lj-musteri" defaultValue="" onChange={(e) => pickMusteri(e.target.value)}>
+              <option value="">— Elle gir —</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.ad}>
+                  {c.ad}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="field">
+            <label htmlFor="lj-tedarikci">Tedarikçi'den seç (opsiyonel)</label>
+            <select id="lj-tedarikci" defaultValue="" onChange={(e) => pickMusteri(e.target.value)}>
+              <option value="">— Elle gir —</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.ad}>
+                  {s.ad}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="lj-taraf">Taraf Adı *</label>

@@ -30,7 +30,11 @@ export default function FaturaDocument({ doc, settings }) {
         </div>
       </div>
 
-      {!isFis && (
+      {/* Fiş'te (Satış/POS) çoğunlukla isimsiz perakende satış oluyor - o
+          yüzden "Perakende Satış" jenerik etiketiyle bu blok hiç
+          gösterilmiyor, yalnızca Müşteriler'den gerçek bir müşteri
+          seçildiğinde görünüyor. */}
+      {(!isFis || (doc.muhatapAdi && doc.muhatapAdi !== "Perakende Satış")) && (
         <div className="fatura-muhatap">
           <div className="fatura-muhatap-label">Sayın:</div>
           <div className="fatura-muhatap-adi">{doc.muhatapAdi || "—"}</div>

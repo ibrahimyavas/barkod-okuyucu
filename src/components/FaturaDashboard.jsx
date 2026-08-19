@@ -23,7 +23,7 @@ const EMPTY_FORM = {
 
 const EMPTY_ITEM = { urunAdi: "", miktar: "", birim: "", birimFiyat: "" };
 
-export default function FaturaDashboard() {
+export default function FaturaDashboard({ suppliers = [], customers = [] }) {
   const { settings, saveSettings } = useFaturaAyarlari();
   const { faturalar, loading, error, addFatura, removeFatura } = useFaturalar();
   const { accounts } = useCariAccounts();
@@ -64,6 +64,19 @@ export default function FaturaDashboard() {
       muhatapAdres: acc?.adres || "",
       muhatapTelefon: acc?.telefon || "",
     }));
+  }
+
+  // Cari Hesap seçici (yukarıda) borç/alacak takip eden hesaplar için;
+  // bunlar sadece isim/adres/telefon dolduran hızlı seçimler - Tedarikçiler
+  // ve Müşteriler'de tanımlanan kayıtlar burada da otomatik geliyor.
+  function pickMusteri(id) {
+    const c = customers.find((cu) => cu.id === id);
+    if (c) setForm((f) => ({ ...f, muhatapAdi: c.ad, muhatapAdres: c.adres || "", muhatapTelefon: c.telefon || "" }));
+  }
+
+  function pickTedarikci(id) {
+    const s = suppliers.find((su) => su.id === id);
+    if (s) setForm((f) => ({ ...f, muhatapAdi: s.ad, muhatapAdres: s.adres || "", muhatapTelefon: s.telefon || "" }));
   }
 
   function pickProduct(id) {
@@ -213,6 +226,30 @@ export default function FaturaDashboard() {
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.ad}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="fd-musteri">Müşteri'den seç (opsiyonel)</label>
+          <select id="fd-musteri" defaultValue="" onChange={(e) => pickMusteri(e.target.value)}>
+            <option value="">— Elle gir —</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.ad}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="fd-tedarikci">Tedarikçi'den seç (opsiyonel)</label>
+          <select id="fd-tedarikci" defaultValue="" onChange={(e) => pickTedarikci(e.target.value)}>
+            <option value="">— Elle gir —</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.ad}
               </option>
             ))}
           </select>

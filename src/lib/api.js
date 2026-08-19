@@ -209,6 +209,23 @@ export function deleteDepoTransfer(id) {
   return request(`/api/depo-transferleri/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchCustomers() {
+  const data = await request("/api/customers");
+  return data.customers;
+}
+
+export function createCustomer(customer) {
+  return request("/api/customers", withJsonBody("POST", customer));
+}
+
+export function updateCustomer(id, fields) {
+  return request(`/api/customers/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
+export function deleteCustomer(id) {
+  return request(`/api/customers/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function login(password) {
   return request("/api/auth/login", withJsonBody("POST", { password }));
 }

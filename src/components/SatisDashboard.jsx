@@ -34,7 +34,7 @@ function splitLine(adet, birimFiyat, vergiOrani) {
 // gerekmiyor. Gerçek bir yazar kasaya doğrudan bağlı DEĞİL (bkz. aşağıdaki
 // not) - bu, kasiyerin fiziksel cihaza ayrıca girmesi gereken bir "fiş"
 // üretir.
-export default function SatisDashboard({ fiyatlar, products }) {
+export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
   const cart = useSatisCart();
   const { faturalar, addFatura } = useFaturalar();
   const { settings } = useFaturaAyarlari();
@@ -44,6 +44,10 @@ export default function SatisDashboard({ fiyatlar, products }) {
   const [lastHit, setLastHit] = useState(null);
   const [scanError, setScanError] = useState(null);
   const [odemeYontemi, setOdemeYontemi] = useState("nakit");
+  // Opsiyonel - Müşteriler'de tanımlı bir müşteriyi fişe bağlamak için.
+  // Boş bırakılırsa (çoğu perakende satışta olduğu gibi) worker/fatura.js
+  // "Perakende Satış" yazıyor.
+  const [customerId, setCustomerId] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null);
@@ -109,11 +113,13 @@ export default function SatisDashboard({ fiyatlar, products }) {
         birimFiyat: it.birimFiyat,
         vergiOrani: it.vergiOrani,
       }));
+      const musteri = customers.find((c) => c.id === customerId);
       const tarih = todayISO();
-      const result = await addFatura({ tur: "fis", tarih, odemeYontemi, kalemler });
+      const result = await addFatura({ tur: "fis", tarih, odemeYontemi, muhatapAdi: musteri?.ad || "", kalemler });
       setActiveReport(null);
-      setActiveDoc({ tur: "fis", tarih, odemeYontemi, kalemler, ...result });
+      setActiveDoc({ tur: "fis", tarih, odemeYontemi, muhatapAdi: musteri?.ad || "", kalemler, ...result });
       cart.clearCart();
+      setCustomerId("");
       requestAnimationFrame(() => window.print());
     } catch (err) {
       setCompleteError(err.message);
@@ -252,6 +258,18 @@ export default function SatisDashboard({ fiyatlar, products }) {
             Ara Toplam: {fmtCurrency(totals.araToplam)} · KDV: {fmtCurrency(totals.kdvTutari)} · Genel Toplam:{" "}
             <strong>{fmtCurrency(totals.genelToplam)}</strong>
           </p>
+
+          <div className="field">
+            <label htmlFor="st-musteri">Müşteri (opsiyonel)</label>
+            <select id="st-musteri" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <option value="">— Perakende (isimsiz) —</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.ad}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="scan-mode-toggle">
             {ODEME_YONTEMLERI.map((o) => (

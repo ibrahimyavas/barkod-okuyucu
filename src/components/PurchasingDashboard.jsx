@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { Wallet, Clock, Users, Plus, Pencil, Trash2, X, Search, ChevronDown } from "lucide-react";
-import { useSuppliers } from "../hooks/useSuppliers.js";
+import { Wallet, Clock, Users, Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { usePurchases } from "../hooks/usePurchases.js";
 import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
 import { findCatalogEntry } from "../lib/catalog.js";
@@ -18,8 +17,6 @@ const EMPTY_PURCHASE = {
   tarih: todayISO(),
   notMetni: "",
 };
-
-const EMPTY_SUPPLIER = { ad: "", yetkili: "", telefon: "", adres: "" };
 
 const STATUS_LABEL = { beklemede: "Beklemede", kismi: "Kısmi", odendi: "Ödendi" };
 const STATUS_NEXT = { beklemede: "kismi", kismi: "odendi", odendi: "beklemede" };
@@ -40,15 +37,12 @@ function purchaseToFormShape(p) {
   };
 }
 
-export default function PurchasingDashboard({ catalog = [] }) {
-  const { suppliers, addSupplier, editSupplier, removeSupplier } = useSuppliers();
+// Tedarikçi tanımlama artık ayrı bir ekranda (bkz. TedarikcilerDashboard.jsx)
+// - burası yalnızca listeden seçiyor. `suppliers` App.jsx'te tek yerden
+// çekiliyor, böylece Tedarikçiler'de eklenen bir kayıt buraya (ve Fatura/
+// Lojistik'e) otomatik yansıyor.
+export default function PurchasingDashboard({ catalog = [], suppliers = [] }) {
   const { purchases, loading, error, addPurchase, cycleStatus, editPurchase, removePurchase } = usePurchases();
-
-  const [supplierPanelOpen, setSupplierPanelOpen] = useState(false);
-  const [supplierForm, setSupplierForm] = useState(EMPTY_SUPPLIER);
-  const [editingSupplierId, setEditingSupplierId] = useState(null);
-  const [supplierError, setSupplierError] = useState(null);
-  const [supplierSubmitting, setSupplierSubmitting] = useState(false);
 
   const [form, setForm] = useState(EMPTY_PURCHASE);
   const [editingId, setEditingId] = useState(null);
@@ -104,44 +98,6 @@ export default function PurchasingDashboard({ catalog = [] }) {
       if (field === "toplamTutar") next.toplamTutarTouched = true;
       return next;
     });
-  }
-
-  function startEditSupplier(s) {
-    setEditingSupplierId(s.id);
-    setSupplierForm({ ad: s.ad || "", yetkili: s.yetkili || "", telefon: s.telefon || "", adres: s.adres || "" });
-    setSupplierError(null);
-  }
-
-  function cancelEditSupplier() {
-    setEditingSupplierId(null);
-    setSupplierForm(EMPTY_SUPPLIER);
-    setSupplierError(null);
-  }
-
-  async function handleSupplierSubmit(e) {
-    e.preventDefault();
-    const ad = supplierForm.ad.trim();
-    if (!ad) {
-      setSupplierError("Tedarikçi adı zorunlu.");
-      return;
-    }
-    setSupplierSubmitting(true);
-    setSupplierError(null);
-    try {
-      if (editingSupplierId) {
-        await editSupplier(editingSupplierId, { ...supplierForm, ad });
-        setEditingSupplierId(null);
-        setSupplierForm(EMPTY_SUPPLIER);
-      } else {
-        const id = await addSupplier({ ...supplierForm, ad });
-        setSupplierForm(EMPTY_SUPPLIER);
-        setForm((f) => ({ ...f, supplierId: id }));
-      }
-    } catch (err) {
-      setSupplierError(err.message);
-    } finally {
-      setSupplierSubmitting(false);
-    }
   }
 
   function startEdit(p) {
@@ -221,106 +177,6 @@ export default function PurchasingDashboard({ catalog = [] }) {
         </div>
       </div>
 
-      <div className="collapsible">
-        <button
-          type="button"
-          className="collapsible-header"
-          onClick={() => setSupplierPanelOpen((v) => !v)}
-        >
-          <span>
-            <Users size={14} /> Tedarikçiler ({suppliers.length})
-          </span>
-          <ChevronDown size={16} className={supplierPanelOpen ? "chevron-open" : ""} />
-        </button>
-
-        {supplierPanelOpen && (
-          <div className="collapsible-body">
-            {suppliers.length > 0 && (
-              <ul className="supplier-list">
-                {suppliers.map((s) => (
-                  <li key={s.id}>
-                    <span>
-                      <strong>{s.ad}</strong>
-                      {s.yetkili ? ` · ${s.yetkili}` : ""}
-                      {s.telefon ? ` · ${s.telefon}` : ""}
-                    </span>
-                    <span className="row-actions">
-                      <button
-                        className="icon-btn"
-                        onClick={() => startEditSupplier(s)}
-                        aria-label="Tedarikçiyi düzenle"
-                        title="Tedarikçiyi düzenle"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        className="icon-btn danger"
-                        onClick={() => removeSupplier(s.id)}
-                        aria-label="Tedarikçiyi sil"
-                        title="Tedarikçiyi sil"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <form className="product-form" onSubmit={handleSupplierSubmit}>
-              <div className="field">
-                <label htmlFor="sp-ad">Tedarikçi Adı *</label>
-                <input
-                  id="sp-ad"
-                  type="text"
-                  value={supplierForm.ad}
-                  onChange={(e) => setSupplierForm((f) => ({ ...f, ad: e.target.value }))}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="sp-yetkili">Yetkili</label>
-                <input
-                  id="sp-yetkili"
-                  type="text"
-                  value={supplierForm.yetkili}
-                  onChange={(e) => setSupplierForm((f) => ({ ...f, yetkili: e.target.value }))}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="sp-telefon">Telefon</label>
-                <input
-                  id="sp-telefon"
-                  type="text"
-                  value={supplierForm.telefon}
-                  onChange={(e) => setSupplierForm((f) => ({ ...f, telefon: e.target.value }))}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="sp-adres">Adres</label>
-                <input
-                  id="sp-adres"
-                  type="text"
-                  value={supplierForm.adres}
-                  onChange={(e) => setSupplierForm((f) => ({ ...f, adres: e.target.value }))}
-                />
-              </div>
-              {supplierError && <p className="form-error">{supplierError}</p>}
-              <div className="form-actions">
-                <button type="submit" className="submit-btn" disabled={supplierSubmitting}>
-                  {editingSupplierId ? <Pencil size={16} /> : <Plus size={16} />}
-                  {supplierSubmitting ? "Kaydediliyor…" : editingSupplierId ? "Tedarikçiyi Güncelle" : "Tedarikçi Ekle"}
-                </button>
-                {editingSupplierId && (
-                  <button type="button" className="icon-btn" onClick={cancelEditSupplier}>
-                    <X size={16} /> İptal
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
-
       <form className="product-form" onSubmit={handlePurchaseSubmit}>
         <div className="field">
           <label htmlFor="pu-tedarikci">Tedarikçi</label>
@@ -336,6 +192,9 @@ export default function PurchasingDashboard({ catalog = [] }) {
               </option>
             ))}
           </select>
+          {suppliers.length === 0 && (
+            <p className="field-hint">Henüz tedarikçi yok - "Tedarikçiler" sekmesinden ekleyebilirsiniz.</p>
+          )}
         </div>
 
         <div className="field">

@@ -257,6 +257,36 @@ body {
   overflow-y: auto;
 }
 
+/* Operasyon (günlük kullanım) / Tanımlama (saf veri girişi) bölümleri -
+   bkz. App.jsx TABS[].group. Operasyon önce geliyor, kullanım
+   önceliklendirmesine göre daha erişilebilir olsun diye. */
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-nav-group + .sidebar-nav-group {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-group-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 0 10px 4px;
+}
+
+.sidebar-nav-group-settings {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -461,6 +491,15 @@ body {
   background: var(--panel-2);
   border-color: var(--border);
   color: var(--text);
+}
+
+/* Operasyon/Tanımlama grupları (bkz. App.jsx TABS[].group) ve Ayarlar
+   arasında ince bir ayraç - üst sekme şeridi tek satır pill olduğu için
+   sidebar'daki gibi metin başlığı yerine sadece görsel bir bölme. */
+.tab-btn.tab-group-start {
+  margin-left: 10px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
 }
 
 /* ---- product entry dashboard ------------------------------------------ */
@@ -1187,6 +1226,19 @@ select.status-badge {
 
 .qr-scan-toggle-row {
   display: flex;
+}
+
+.module-settings-group-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 18px 0 6px;
+}
+
+.module-settings-group-label:first-of-type {
+  margin-top: 0;
 }
 
 .module-settings-list {
