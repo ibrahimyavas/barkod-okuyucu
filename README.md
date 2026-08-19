@@ -62,6 +62,13 @@ sekmeler:
   kalıcı, Etiket Bas'ın aksine. (Not: bir faturayı silmek, o faturayla
   cari hesaba işlenmiş borç kaydını otomatik geri almaz - gerekirse Cari
   Hesap'tan elle düzeltin.)
+- **Lojistik:** Giden (müşteriye) ve gelen (tedarikçiden) sevkiyat takibi -
+  taraf, araç plakası, sürücü, çıkış/varış konumu, planlanan/gerçekleşen
+  tarih, durum (Planlandı/Yolda/Teslim Edildi/İptal - satırdaki seçim
+  kutusundan değiştirilir). "Gecikti" ayrı bir durum değeri değil, planlanan
+  tarihi geçmiş hâlâ açık kayıtlar için otomatik hesaplanan bir rozet - elle
+  işaretlemeyi unutunca veri yanlış kalmaz. Durum "Teslim Edildi" yapılınca
+  gerçekleşen tarih, elle girilmediyse sunucu tarafında bugüne ayarlanır.
 
 ## Nasıl çalışır
 

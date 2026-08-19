@@ -16,11 +16,7 @@
     {
       "binding": "DB",
       "database_name": "barkod-okuyucu-db",
-      // Placeholder - replace with the real ID printed by
-      // `npx wrangler d1 create barkod-okuyucu-db` before deploying. Local
-      // dev/migrations work fine with the placeholder since --local never
-      // talks to the real Cloudflare API.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "eb39ac9b-f49f-4006-b585-6a3878ca73bd",
       "migrations_dir": "migrations"
     }
   ]

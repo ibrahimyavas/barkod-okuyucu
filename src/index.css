@@ -350,6 +350,25 @@ body {
   border-color: var(--accent);
 }
 
+.status-badge.status-iptal {
+  color: var(--text-muted);
+  border-color: var(--border);
+  text-decoration: line-through;
+}
+
+.status-badge.status-gecikti {
+  color: #fca5a5;
+  border-color: var(--danger);
+  margin-left: 4px;
+  cursor: default;
+}
+
+select.status-badge {
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 /* ---- cari hesap balances ------------------------------------------------ */
 
 .balance-positive {

@@ -120,6 +120,23 @@ export function deleteFatura(id) {
   return request(`/api/faturalar/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function fetchSevkiyatlar() {
+  const data = await request("/api/sevkiyatlar");
+  return data.sevkiyatlar;
+}
+
+export function createSevkiyat(sevkiyat) {
+  return request("/api/sevkiyatlar", withJsonBody("POST", sevkiyat));
+}
+
+export function updateSevkiyat(id, fields) {
+  return request(`/api/sevkiyatlar/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
+export function deleteSevkiyat(id) {
+  return request(`/api/sevkiyatlar/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function login(password) {
   return request("/api/auth/login", withJsonBody("POST", { password }));
 }

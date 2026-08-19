@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, LogOut } from "lucide-react";
+import { ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck, LogOut } from "lucide-react";
 import ScannerView from "./components/ScannerView.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
@@ -8,6 +8,7 @@ import LowStockDashboard from "./components/LowStockDashboard.jsx";
 import LabelPrintDashboard from "./components/LabelPrintDashboard.jsx";
 import ReportDashboard from "./components/ReportDashboard.jsx";
 import FaturaDashboard from "./components/FaturaDashboard.jsx";
+import LojistikDashboard from "./components/LojistikDashboard.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: "labels", label: "Etiket Bas", icon: Tag },
   { id: "report", label: "Rapor", icon: LayoutDashboard },
   { id: "fatura", label: "Fatura", icon: FileText },
+  { id: "lojistik", label: "Lojistik", icon: Truck },
 ];
 
 export default function App() {
@@ -88,6 +90,7 @@ export default function App() {
       {view === "labels" && <LabelPrintDashboard />}
       {view === "report" && <ReportDashboard />}
       {view === "fatura" && <FaturaDashboard />}
+      {view === "lojistik" && <LojistikDashboard />}
     </div>
   );
 }

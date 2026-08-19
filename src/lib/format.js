@@ -54,6 +54,13 @@ export function monthKeyOf(dateLike) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// String comparison works correctly for ISO "YYYY-MM-DD" dates - no Date
+// parsing/timezone ambiguity needed.
+export function isPastDate(iso) {
+  if (!iso) return false;
+  return iso < todayISO();
+}
+
 // Last `count` months as "YYYY-MM" keys, oldest first, ending this month -
 // used to fill in zero-value months a bar chart shouldn't just skip.
 export function lastMonthKeys(count) {
