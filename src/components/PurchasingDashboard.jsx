@@ -1,8 +1,9 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Wallet, Clock, Users, Plus, Pencil, Trash2, X, Search, ChevronDown } from "lucide-react";
 import { useSuppliers } from "../hooks/useSuppliers.js";
 import { usePurchases } from "../hooks/usePurchases.js";
 import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
+import { findCatalogEntry } from "../lib/catalog.js";
 import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_PURCHASE = {
@@ -39,7 +40,7 @@ function purchaseToFormShape(p) {
   };
 }
 
-export default function PurchasingDashboard() {
+export default function PurchasingDashboard({ catalog = [] }) {
   const { suppliers, addSupplier, editSupplier, removeSupplier } = useSuppliers();
   const { purchases, loading, error, addPurchase, cycleStatus, editPurchase, removePurchase } = usePurchases();
 
@@ -54,6 +55,17 @@ export default function PurchasingDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [query, setQuery] = useState("");
+
+  // Barkod, Ürün Listesi kataloğundaki bir kayıtla eşleşirse ürün adı ve
+  // birimi otomatik dolduruyoruz - bkz. lib/catalog.js. Yalnızca yeni kayıt
+  // eklerken (düzenleme dışında) devreye giriyor.
+  useEffect(() => {
+    if (editingId) return;
+    const match = findCatalogEntry(catalog, form.barkod);
+    if (!match) return;
+    setForm((f) => ({ ...f, urunAdi: match.urunAdi || f.urunAdi, birim: match.birim || f.birim }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.barkod, editingId]);
 
   const supplierById = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers]);
 
@@ -339,7 +351,20 @@ export default function PurchasingDashboard() {
 
         <div className="field">
           <label htmlFor="pu-barkod">Barkod</label>
-          <input id="pu-barkod" type="text" value={form.barkod} onChange={(e) => updateField("barkod", e.target.value)} />
+          <input
+            id="pu-barkod"
+            type="text"
+            value={form.barkod}
+            onChange={(e) => updateField("barkod", e.target.value)}
+            list="pu-barkod-list"
+          />
+          <datalist id="pu-barkod-list">
+            {catalog.map((c) => (
+              <option key={c.id} value={c.barkod}>
+                {c.urunAdi}
+              </option>
+            ))}
+          </datalist>
         </div>
 
         <div className="field">

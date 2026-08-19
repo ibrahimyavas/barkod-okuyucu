@@ -5,6 +5,7 @@
 import { json } from "./utils.js";
 import { handleAuthRoute, requireAuth } from "./auth.js";
 import { handleProductsRoute } from "./products.js";
+import { handleUrunKatalogRoute } from "./urunKatalog.js";
 import { handlePurchasesRoute } from "./purchases.js";
 import { handleCariRoute } from "./cari.js";
 import { handleFaturaRoute } from "./fatura.js";
@@ -21,6 +22,9 @@ async function handleApi(request, env, url) {
 
   const productsResponse = await handleProductsRoute(request, env, url.pathname);
   if (productsResponse) return productsResponse;
+
+  const urunKatalogResponse = await handleUrunKatalogRoute(request, env, url.pathname);
+  if (urunKatalogResponse) return urunKatalogResponse;
 
   const purchasesResponse = await handlePurchasesRoute(request, env, url.pathname);
   if (purchasesResponse) return purchasesResponse;

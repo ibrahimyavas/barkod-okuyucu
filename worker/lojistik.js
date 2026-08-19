@@ -9,6 +9,8 @@ function sevkiyatRow(row) {
     yon: row.yon,
     cariId: row.cari_id,
     tarafAdi: row.taraf_adi,
+    barkod: row.barkod,
+    urunAdi: row.urun_adi,
     aracPlakasi: row.arac_plakasi,
     surucu: row.surucu,
     cikisKonumu: row.cikis_konumu,
@@ -45,15 +47,17 @@ async function createSevkiyat(request, env) {
 
   await env.DB.prepare(
     `INSERT INTO sevkiyatlar
-       (id, yon, cari_id, taraf_adi, arac_plakasi, surucu, cikis_konumu, varis_konumu,
+       (id, yon, cari_id, taraf_adi, barkod, urun_adi, arac_plakasi, surucu, cikis_konumu, varis_konumu,
         planlanan_tarih, gerceklesen_tarih, durum, not_metni, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`
   )
     .bind(
       id,
       yon,
       String(body.cariId ?? "").trim() || null,
       tarafAdi,
+      String(body.barkod ?? "").trim() || null,
+      String(body.urunAdi ?? "").trim() || null,
       String(body.aracPlakasi ?? "").trim() || null,
       String(body.surucu ?? "").trim() || null,
       String(body.cikisKonumu ?? "").trim() || null,
@@ -94,6 +98,8 @@ async function updateSevkiyat(request, env, id) {
   const fieldMap = {
     yon: "yon",
     tarafAdi: "taraf_adi",
+    barkod: "barkod",
+    urunAdi: "urun_adi",
     aracPlakasi: "arac_plakasi",
     surucu: "surucu",
     cikisKonumu: "cikis_konumu",

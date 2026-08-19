@@ -1171,6 +1171,13 @@ select.status-badge {
   font-size: 0.9rem;
 }
 
+.dashboard-hint {
+  margin: -6px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .scan-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);

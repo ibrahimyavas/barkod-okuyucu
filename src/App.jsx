@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ScanLine, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck,
+  ScanLine, ClipboardList, PackagePlus, ShoppingCart, Landmark, AlertTriangle, Tag, LayoutDashboard, FileText, Truck,
   Sun, Moon, PanelLeft, PanelTop, PanelLeftClose, PanelLeftOpen, LogOut,
 } from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
 import { useNavLayout } from "./hooks/useNavLayout.js";
 import { useProducts } from "./hooks/useProducts.js";
+import { useUrunKatalog } from "./hooks/useUrunKatalog.js";
 import { isLowStock } from "./lib/stock.js";
 import ScannerView from "./components/ScannerView.jsx";
+import UrunListesiDashboard from "./components/UrunListesiDashboard.jsx";
 import ProductEntryDashboard from "./components/ProductEntryDashboard.jsx";
 import PurchasingDashboard from "./components/PurchasingDashboard.jsx";
 import CariHesapDashboard from "./components/CariHesapDashboard.jsx";
@@ -20,9 +22,11 @@ import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
 
 // Each new dashboard just needs an entry here - App.jsx doesn't otherwise
-// need to change as the module list grows.
+// need to change as the module list grows. "catalog" oturuyor Tarayıcı ile
+// Ürün Girişi arasında - kullanıcının "ara ekran" isteği tam olarak bu konum.
 const TABS = [
   { id: "scanner", label: "Tarayıcı", icon: ScanLine },
+  { id: "catalog", label: "Ürün Listesi", icon: ClipboardList },
   { id: "products", label: "Ürün Girişi", icon: PackagePlus },
   { id: "purchasing", label: "Satın Alma", icon: ShoppingCart },
   { id: "cari", label: "Cari Hesap", icon: Landmark },
@@ -46,6 +50,11 @@ export default function App() {
   // stoğu güncellenince rozet de aynı render'da güncelleniyor.
   const { products, loading: productsLoading, error: productsError, addProduct, updateProduct, removeProduct } =
     useProducts(authenticated);
+  // Barkod -> ürün kimliği kataloğu (bkz. hooks/useUrunKatalog.js) - Ürün
+  // Girişi, Satın Alma ve Lojistik'in hepsi aynı listeyi okuyor, otomatik
+  // ad/kategori/birim doldurma için (bkz. lib/catalog.js).
+  const { catalog, loading: catalogLoading, error: catalogError, addEntry, updateEntry, removeEntry } =
+    useUrunKatalog(authenticated);
   const lowStockCount = useMemo(() => products.filter(isLowStock).length, [products]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -126,6 +135,16 @@ export default function App() {
   const activeDashboard = (
     <>
       {view === "scanner" && <ScannerView onSendToEntry={handleSendToEntry} />}
+      {view === "catalog" && (
+        <UrunListesiDashboard
+          catalog={catalog}
+          loading={catalogLoading}
+          error={catalogError}
+          addEntry={addEntry}
+          updateEntry={updateEntry}
+          removeEntry={removeEntry}
+        />
+      )}
       {view === "products" && (
         <ProductEntryDashboard
           prefillBarcode={prefillBarcode}
@@ -136,9 +155,10 @@ export default function App() {
           addProduct={addProduct}
           updateProduct={updateProduct}
           removeProduct={removeProduct}
+          catalog={catalog}
         />
       )}
-      {view === "purchasing" && <PurchasingDashboard />}
+      {view === "purchasing" && <PurchasingDashboard catalog={catalog} />}
       {view === "cari" && <CariHesapDashboard />}
       {view === "lowstock" && (
         <LowStockDashboard
@@ -151,7 +171,7 @@ export default function App() {
       {view === "labels" && <LabelPrintDashboard />}
       {view === "report" && <ReportDashboard />}
       {view === "fatura" && <FaturaDashboard />}
-      {view === "lojistik" && <LojistikDashboard />}
+      {view === "lojistik" && <LojistikDashboard catalog={catalog} />}
     </>
   );
 

@@ -42,6 +42,23 @@ export function updateProduct(id, fields) {
   return request(`/api/products/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
 }
 
+export async function fetchUrunKatalog() {
+  const data = await request("/api/urun-katalog");
+  return data.items;
+}
+
+export function createUrunKatalog(item) {
+  return request("/api/urun-katalog", withJsonBody("POST", item));
+}
+
+export function updateUrunKatalog(id, fields) {
+  return request(`/api/urun-katalog/${encodeURIComponent(id)}`, withJsonBody("PATCH", fields));
+}
+
+export function deleteUrunKatalog(id) {
+  return request(`/api/urun-katalog/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export async function fetchSuppliers() {
   const data = await request("/api/suppliers");
   return data.suppliers;

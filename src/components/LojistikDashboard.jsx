@@ -1,14 +1,17 @@
-import { Fragment, useMemo, useState } from "react";
-import { Truck, PackageCheck, AlertTriangle, Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { Truck, PackageCheck, AlertTriangle, Plus, Pencil, Trash2, X, Search, ScanBarcode } from "lucide-react";
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { todayISO, trDate, isPastDate, groupByDate } from "../lib/format.js";
+import { findCatalogEntry } from "../lib/catalog.js";
 import DatePicker from "./DatePicker.jsx";
 
 const EMPTY_FORM = {
   yon: "giden",
   cariId: "",
   tarafAdi: "",
+  barkod: "",
+  urunAdi: "",
   aracPlakasi: "",
   surucu: "",
   cikisKonumu: "",
@@ -40,6 +43,8 @@ function toFormShape(s) {
     yon: s.yon || "giden",
     cariId: s.cariId || "",
     tarafAdi: s.tarafAdi || "",
+    barkod: s.barkod || "",
+    urunAdi: s.urunAdi || "",
     aracPlakasi: s.aracPlakasi || "",
     surucu: s.surucu || "",
     cikisKonumu: s.cikisKonumu || "",
@@ -50,7 +55,7 @@ function toFormShape(s) {
   };
 }
 
-export default function LojistikDashboard() {
+export default function LojistikDashboard({ catalog = [] }) {
   const { sevkiyatlar, loading, error, addSevkiyat, updateOne, removeSevkiyat } = useSevkiyatlar();
   const { accounts } = useCariAccounts();
 
@@ -69,10 +74,22 @@ export default function LojistikDashboard() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  // Barkod, Ürün Listesi kataloğundaki bir kayıtla eşleşirse ürün adını
+  // otomatik dolduruyoruz - bkz. lib/catalog.js.
+  useEffect(() => {
+    if (editingId) return;
+    const match = findCatalogEntry(catalog, form.barkod);
+    if (!match) return;
+    setForm((f) => ({ ...f, urunAdi: match.urunAdi || f.urunAdi }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.barkod, editingId]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sevkiyatlar;
-    return sevkiyatlar.filter((s) => [s.tarafAdi, s.aracPlakasi, s.surucu].some((v) => v?.toLowerCase().includes(q)));
+    return sevkiyatlar.filter((s) =>
+      [s.tarafAdi, s.aracPlakasi, s.surucu, s.urunAdi, s.barkod].some((v) => v?.toLowerCase().includes(q))
+    );
   }, [sevkiyatlar, query]);
 
   const groups = useMemo(() => groupByDate(filtered, (s) => s.planlananTarih), [filtered]);
@@ -179,6 +196,32 @@ export default function LojistikDashboard() {
         </div>
 
         <div className="field">
+          <label htmlFor="lj-barkod">
+            <ScanBarcode size={14} /> Barkod
+          </label>
+          <input
+            id="lj-barkod"
+            type="text"
+            value={form.barkod}
+            onChange={(e) => updateField("barkod", e.target.value)}
+            placeholder="Taranan kod ya da elle girin"
+            list="lj-barkod-list"
+          />
+          <datalist id="lj-barkod-list">
+            {catalog.map((c) => (
+              <option key={c.id} value={c.barkod}>
+                {c.urunAdi}
+              </option>
+            ))}
+          </datalist>
+        </div>
+
+        <div className="field">
+          <label htmlFor="lj-urun">Ürün Adı</label>
+          <input id="lj-urun" type="text" value={form.urunAdi} onChange={(e) => updateField("urunAdi", e.target.value)} />
+        </div>
+
+        <div className="field">
           <label htmlFor="lj-plaka">Araç Plakası</label>
           <input id="lj-plaka" type="text" value={form.aracPlakasi} onChange={(e) => updateField("aracPlakasi", e.target.value)} />
         </div>
@@ -258,6 +301,7 @@ export default function LojistikDashboard() {
                 <tr>
                   <th>Yön</th>
                   <th>Taraf</th>
+                  <th>Ürün</th>
                   <th>Plaka / Sürücü</th>
                   <th>Planlanan</th>
                   <th>Gerçekleşen</th>
@@ -269,12 +313,13 @@ export default function LojistikDashboard() {
                 {groups.map((g) => (
                   <Fragment key={g.key}>
                     <tr className="date-divider">
-                      <td colSpan={7}>{g.label}</td>
+                      <td colSpan={8}>{g.label}</td>
                     </tr>
                     {g.items.map((s) => (
                       <tr key={s.id} className={editingId === s.id ? "editing-row" : ""}>
                         <td className="muted">{s.yon === "giden" ? "Giden" : "Gelen"}</td>
                         <td>{s.tarafAdi}</td>
+                        <td className="muted">{s.urunAdi || "-"}</td>
                         <td className="muted">
                           {s.aracPlakasi || "-"}
                           {s.surucu ? ` · ${s.surucu}` : ""}

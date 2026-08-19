@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Boxes, Wallet, Plus, Pencil, Trash2, X, RefreshCw, Search, ScanBarcode, TriangleAlert } from "lucide-react";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import { stockStatus } from "../lib/stock.js";
+import { findCatalogEntry } from "../lib/catalog.js";
 import StockAdjuster from "./StockAdjuster.jsx";
 import DatePicker from "./DatePicker.jsx";
 
@@ -40,6 +41,7 @@ export default function ProductEntryDashboard({
   addProduct,
   updateProduct,
   removeProduct,
+  catalog = [],
 }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
@@ -54,6 +56,24 @@ export default function ProductEntryDashboard({
     setForm((f) => ({ ...f, barkod: prefillBarcode }));
     onConsumePrefill?.();
   }, [prefillBarcode, onConsumePrefill]);
+
+  // Barkod, Ürün Listesi kataloğundaki bir kayıtla eşleşirse ad/kategori/
+  // birim'i otomatik dolduruyoruz - aynı barkodu her stok girişinde elle
+  // yeniden yazmamak için (bkz. lib/catalog.js). Yalnızca yeni kayıt
+  // eklerken (editingId yokken) devreye giriyor; bir ürünü düzenlerken
+  // kendi mevcut verisini ezmemeli.
+  useEffect(() => {
+    if (editingId) return;
+    const match = findCatalogEntry(catalog, form.barkod);
+    if (!match) return;
+    setForm((f) => ({
+      ...f,
+      urunAdi: match.urunAdi || f.urunAdi,
+      kategori: match.kategori || f.kategori,
+      birim: match.birim || f.birim,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.barkod, editingId]);
 
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.kategori).filter(Boolean));
@@ -175,7 +195,15 @@ export default function ProductEntryDashboard({
             value={form.barkod}
             onChange={(e) => updateField("barkod", e.target.value)}
             placeholder="Taranan kod ya da elle girin"
+            list="pf-barkod-list"
           />
+          <datalist id="pf-barkod-list">
+            {catalog.map((c) => (
+              <option key={c.id} value={c.barkod}>
+                {c.urunAdi}
+              </option>
+            ))}
+          </datalist>
         </div>
 
         {barcodeConflict && (
