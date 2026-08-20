@@ -5,8 +5,9 @@ import {
 import { useSatisCart } from "../hooks/useSatisCart.js";
 import { useFaturalar } from "../hooks/useFaturalar.js";
 import { useFaturaAyarlari } from "../hooks/useFaturaAyarlari.js";
+import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { useCameraScanner } from "../hooks/useCameraScanner.js";
-import { resolveSalePrice } from "../lib/satis.js";
+import { resolveSalePrice, sellableProducts, findBarcodeByName } from "../lib/satis.js";
 import { todayISO, trDate, fmtCurrency } from "../lib/format.js";
 import CameraPanel from "./CameraPanel.jsx";
 import FaturaDocument from "./FaturaDocument.jsx";
@@ -38,8 +39,11 @@ export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
   const cart = useSatisCart();
   const { faturalar, addFatura } = useFaturalar();
   const { settings } = useFaturaAyarlari();
+  const { accounts } = useCariAccounts();
 
   const [manualCode, setManualCode] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [nameError, setNameError] = useState(null);
   const [scannerOn, setScannerOn] = useState(false);
   const [lastHit, setLastHit] = useState(null);
   const [scanError, setScanError] = useState(null);
@@ -48,11 +52,17 @@ export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
   // Boş bırakılırsa (çoğu perakende satışta olduğu gibi) worker/fatura.js
   // "Perakende Satış" yazıyor.
   const [customerId, setCustomerId] = useState("");
+  // Opsiyonel - Cari Hesap'a borç olarak işlemek için (veresiye satış).
+  // customerId'den ayrı: biri fişte görünen isim, diğeri bakiye takibi.
+  const [cariId, setCariId] = useState("");
+  const [postToCari, setPostToCari] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null);
   const [activeReport, setActiveReport] = useState(null);
   const [gunSonuOpen, setGunSonuOpen] = useState(false);
+
+  const sellable = useMemo(() => sellableProducts(fiyatlar, products), [fiyatlar, products]);
 
   const handleAddCode = useCallback(
     (code) => {
@@ -82,6 +92,22 @@ export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
     if (!code) return;
     handleAddCode(code);
     setManualCode("");
+  }
+
+  // Barkodu bilmeyen/eldeki olmayan kasiyer için - ürün adını yazıp
+  // (datalist'ten seçerek) aynı sepete ekleme akışına giriyor.
+  function handleNameSubmit(e) {
+    e.preventDefault();
+    const name = manualName.trim();
+    if (!name) return;
+    const barkod = findBarcodeByName(name, { fiyatlar, products });
+    if (!barkod) {
+      setNameError(`"${name}" adıyla satılabilir bir ürün bulunamadı - listeden tam adını seçin.`);
+      return;
+    }
+    setNameError(null);
+    handleAddCode(barkod);
+    setManualName("");
   }
 
   const totals = useMemo(() => {
@@ -115,11 +141,21 @@ export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
       }));
       const musteri = customers.find((c) => c.id === customerId);
       const tarih = todayISO();
-      const result = await addFatura({ tur: "fis", tarih, odemeYontemi, muhatapAdi: musteri?.ad || "", kalemler });
+      const result = await addFatura({
+        tur: "fis",
+        tarih,
+        odemeYontemi,
+        muhatapAdi: musteri?.ad || "",
+        kalemler,
+        cariId: cariId || null,
+        postToCari,
+      });
       setActiveReport(null);
       setActiveDoc({ tur: "fis", tarih, odemeYontemi, muhatapAdi: musteri?.ad || "", kalemler, ...result });
       cart.clearCart();
       setCustomerId("");
+      setCariId("");
+      setPostToCari(false);
       requestAnimationFrame(() => window.print());
     } catch (err) {
       setCompleteError(err.message);
@@ -204,6 +240,27 @@ export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
 
       {scanError && <p className="form-error">{scanError}</p>}
 
+      {/* Barkodu elde/akılda olmayan kasiyer için - ürün adıyla ekleme. */}
+      <form className="manual-entry" onSubmit={handleNameSubmit}>
+        <input
+          type="text"
+          placeholder="Ya da ürün adıyla ekleyin…"
+          list="st-urun-adlari"
+          value={manualName}
+          onChange={(e) => setManualName(e.target.value)}
+        />
+        <datalist id="st-urun-adlari">
+          {sellable.map((p) => (
+            <option key={p.barkod} value={p.urunAdi} />
+          ))}
+        </datalist>
+        <button type="submit" className="icon-btn" aria-label="Sepete ekle">
+          <ShoppingBag size={16} />
+        </button>
+      </form>
+
+      {nameError && <p className="form-error">{nameError}</p>}
+
       <div className="scan-table-wrap">
         {cart.items.length === 0 ? (
           <p className="empty-state">Sepet boş. Barkod okutun ya da elle girin.</p>
@@ -270,6 +327,25 @@ export default function SatisDashboard({ fiyatlar, products, customers = [] }) {
               ))}
             </select>
           </div>
+
+          <div className="field">
+            <label htmlFor="st-cari">Cari Hesap'tan seç (opsiyonel)</label>
+            <select id="st-cari" value={cariId} onChange={(e) => setCariId(e.target.value)}>
+              <option value="">— Seçilmedi —</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.ad}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {cariId && (
+            <label className="checkbox-inline field-wide">
+              <input type="checkbox" checked={postToCari} onChange={(e) => setPostToCari(e.target.checked)} />
+              Tutarı bu cari hesaba borç olarak işle (veresiye satış - hemen tahsil edilmedi)
+            </label>
+          )}
 
           <div className="scan-mode-toggle">
             {ODEME_YONTEMLERI.map((o) => (

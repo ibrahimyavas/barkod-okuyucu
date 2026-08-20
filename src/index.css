@@ -1386,6 +1386,48 @@ select.status-badge {
   gap: 14px;
 }
 
+/* Lojistik/İç Lojistik'in "canlı QR" kartı (bkz. RouteLiveCard render'ı) -
+   taranan referans QR'ının karşılığı olan kaydı modal içinde gösterir. */
+.live-card-fields {
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.live-card-row dt {
+  color: var(--text-muted);
+}
+
+.live-card-row dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.live-card-location-edit {
+  display: flex;
+  gap: 8px;
+}
+
+.live-card-location-edit input {
+  flex: 1;
+}
+
+.modal-body .field {
+  width: 100%;
+}
+
 .scan-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);

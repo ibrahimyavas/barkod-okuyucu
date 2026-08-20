@@ -4,7 +4,7 @@ import { useProducts } from "../hooks/useProducts.js";
 import { useSevkiyatlar } from "../hooks/useSevkiyatlar.js";
 import { useDepoTransferleri } from "../hooks/useDepoTransferleri.js";
 import { useLabelQueue } from "../hooks/useLabelQueue.js";
-import { buildRoutePayload } from "../lib/qrPayload.js";
+import { buildRoutePayload, buildRouteRef } from "../lib/qrPayload.js";
 import BarcodeLabel, { QR_SIZE_OPTIONS } from "./BarcodeLabel.jsx";
 import Modal from "./Modal.jsx";
 
@@ -53,9 +53,12 @@ export default function LabelPrintDashboard() {
 
   // Sadece güzergahı (nereden/nereye) dolduruyor - ürün kimliği hâlâ ayrı,
   // Ürün Girişi seçicisinden ya da elle geliyor. Lojistik kayıtlarında ürün
-  // bilgisi yok, sadece taraf/plaka/güzergah var.
+  // bilgisi yok, sadece taraf/plaka/güzergah var. Bir sevkiyat seçilince QR
+  // artık o kayda CANLI bağlanır (bkz. resolveQrPayload) - iki seçiciden
+  // sadece biri aktif olabilir.
   function pickSevkiyat(id) {
     setSelectedSevkiyatId(id);
+    setSelectedTransferId("");
     const s = sevkiyatlar.find((sv) => sv.id === id);
     if (s) {
       setForm((f) => ({
@@ -70,6 +73,7 @@ export default function LabelPrintDashboard() {
   // konumu nereden/nereye'ye eşliyor.
   function pickTransfer(id) {
     setSelectedTransferId(id);
+    setSelectedSevkiyatId("");
     const t = transferler.find((tr) => tr.id === id);
     if (t) {
       setForm((f) => ({
@@ -82,6 +86,26 @@ export default function LabelPrintDashboard() {
 
   function updateField(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+    // Nereden/nereye elle değiştirilirse artık seçilen kayıtla birebir
+    // uyuşmuyor demektir - canlı referans QR'ını değil, eski statik metin
+    // QR'ını kullanmaya geri dön (bkz. resolveQrPayload).
+    if (field === "nereden" || field === "nereye") {
+      setSelectedSevkiyatId("");
+      setSelectedTransferId("");
+    }
+  }
+
+  // QR içeriğini çözer: bir Sevkiyat/Transfer kaydı seçiliyse (ve elle
+  // değiştirilmediyse) CANLI referans QR'ı (buildRouteRef) üretir - okutan
+  // taraf her seferinde o kaydın o anki halini sunucudan çeker. Aksi halde
+  // (elle girilen/bağlantısız güzergah) eski davranış: bilgiyi doğrudan
+  // metin olarak QR'a gömer (buildRoutePayload).
+  function resolveQrPayload({ urunAdi, barkod, nereden, nereye }) {
+    if (!isQr) return null;
+    if (selectedSevkiyatId) return buildRouteRef("sevk", selectedSevkiyatId);
+    if (selectedTransferId) return buildRouteRef("transfer", selectedTransferId);
+    if (nereden || nereye) return buildRoutePayload({ urunAdi, barkod, nereden, nereye });
+    return null;
   }
 
   function handleAdd(e) {
@@ -91,7 +115,7 @@ export default function LabelPrintDashboard() {
     const urunAdi = form.urunAdi.trim();
     const nereden = form.nereden.trim();
     const nereye = form.nereye.trim();
-    const hasRoute = isQr && (nereden || nereye);
+    const hasRoute = isQr && (nereden || nereye || selectedSevkiyatId || selectedTransferId);
     addItem({
       barkod,
       urunAdi,
@@ -100,7 +124,7 @@ export default function LabelPrintDashboard() {
       boyut: isQr ? form.boyut : undefined,
       nereden: hasRoute ? nereden : "",
       nereye: hasRoute ? nereye : "",
-      qrPayload: hasRoute ? buildRoutePayload({ urunAdi, barkod, nereden, nereye }) : null,
+      qrPayload: resolveQrPayload({ urunAdi, barkod, nereden, nereye }),
     });
   }
 
@@ -209,6 +233,13 @@ export default function LabelPrintDashboard() {
               </select>
             </div>
 
+            {(selectedSevkiyatId || selectedTransferId) && (
+              <p className="field field-wide dashboard-hint">
+                Bu QR canlı bağlı: kayıt Lojistik/İç Lojistik'te güncellendikçe (durum, güzergah) aynı etiketi
+                okutunca güncel bilgi görünür - nereden/nereye'yi elle değiştirirseniz bağlantı kopar.
+              </p>
+            )}
+
             <div className="field">
               <label htmlFor="lb-nereden">Nereden</label>
               <input id="lb-nereden" type="text" value={form.nereden} onChange={(e) => updateField("nereden", e.target.value)} />
@@ -232,11 +263,12 @@ export default function LabelPrintDashboard() {
               boyut={isQr ? form.boyut : undefined}
               nereden={isQr ? form.nereden : ""}
               nereye={isQr ? form.nereye : ""}
-              qrPayload={
-                isQr && (form.nereden || form.nereye)
-                  ? buildRoutePayload({ urunAdi: form.urunAdi, barkod: form.barkod, nereden: form.nereden, nereye: form.nereye })
-                  : null
-              }
+              qrPayload={resolveQrPayload({
+                urunAdi: form.urunAdi,
+                barkod: form.barkod,
+                nereden: form.nereden,
+                nereye: form.nereye,
+              })}
             />
           ) : (
             <p className="empty-state">Önizleme için bir kod girin.</p>

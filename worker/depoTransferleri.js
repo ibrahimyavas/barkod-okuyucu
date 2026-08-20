@@ -70,6 +70,15 @@ async function createTransfer(request, env) {
   return json({ id, createdAt: now }, { status: 201 });
 }
 
+// Tek bir transferin GÜNCEL halini döner - İç Lojistik'in QR "canlı bilgi
+// kartı" modu için (bkz. src/lib/qrPayload.js buildRouteRef/parseRouteRef),
+// worker/lojistik.js:getSevkiyat ile aynı mantık.
+async function getTransfer(env, id) {
+  const row = await env.DB.prepare("SELECT * FROM depo_transferleri WHERE id = ?1").bind(id).first();
+  if (!row) return json({ error: "Transfer bulunamadı." }, { status: 404 });
+  return json({ transfer: transferRow(row) });
+}
+
 async function updateTransfer(request, env, id) {
   let body;
   try {
@@ -126,6 +135,9 @@ export async function handleDepoTransferleriRoute(request, env, pathname) {
     if (request.method === "POST") return createTransfer(request, env);
   }
   const match = pathname.match(/^\/api\/depo-transferleri\/([^/]+)$/);
+  if (match && request.method === "GET") {
+    return getTransfer(env, match[1]);
+  }
   if (match && request.method === "PATCH") {
     return updateTransfer(request, env, match[1]);
   }

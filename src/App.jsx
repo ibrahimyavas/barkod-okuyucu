@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScanLine, ClipboardList, PackagePlus, Tags, ShoppingBag, ShoppingCart, Landmark, Boxes, Tag,
   LayoutDashboard, FileText, Truck, Warehouse, Building2, Users, Settings, Sun, Moon, PanelLeft, PanelTop,
-  PanelLeftClose, PanelLeftOpen, LogOut,
+  PanelLeftClose, PanelLeftOpen, LogOut, Wallet,
 } from "lucide-react";
 import { useTheme } from "./hooks/useTheme.js";
 import { useNavLayout } from "./hooks/useNavLayout.js";
@@ -28,6 +28,7 @@ import ReportDashboard from "./components/ReportDashboard.jsx";
 import FaturaDashboard from "./components/FaturaDashboard.jsx";
 import LojistikDashboard from "./components/LojistikDashboard.jsx";
 import IcLojistikDashboard from "./components/IcLojistikDashboard.jsx";
+import MuhasebeDashboard from "./components/MuhasebeDashboard.jsx";
 import AyarlarDashboard from "./components/AyarlarDashboard.jsx";
 import LoginGate from "./components/LoginGate.jsx";
 import { fetchAuthStatus, logout } from "./lib/api.js";
@@ -51,6 +52,7 @@ const TABS = [
   { id: "labels", label: "Etiket Bas", icon: Tag, group: "operasyon" },
   { id: "report", label: "Rapor", icon: LayoutDashboard, group: "operasyon" },
   { id: "fatura", label: "Fatura", icon: FileText, group: "operasyon" },
+  { id: "muhasebe", label: "Muhasebe", icon: Wallet, group: "operasyon" },
   { id: "lojistik", label: "Lojistik", icon: Truck, group: "operasyon" },
   { id: "icLojistik", label: "İç Lojistik", icon: Warehouse, group: "operasyon" },
   { id: "catalog", label: "Ürün Listesi", icon: ClipboardList, group: "tanimlama" },
@@ -270,6 +272,7 @@ export default function App() {
       {view === "labels" && <LabelPrintDashboard />}
       {view === "report" && <ReportDashboard />}
       {view === "fatura" && <FaturaDashboard suppliers={suppliers} customers={customers} />}
+      {view === "muhasebe" && <MuhasebeDashboard />}
       {view === "lojistik" && <LojistikDashboard catalog={catalog} suppliers={suppliers} customers={customers} />}
       {view === "icLojistik" && <IcLojistikDashboard catalog={catalog} />}
       {view === "settings" && (

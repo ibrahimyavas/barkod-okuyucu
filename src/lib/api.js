@@ -171,6 +171,14 @@ export async function fetchSevkiyatlar() {
   return data.sevkiyatlar;
 }
 
+// QR'daki "canlı referans"ı okutunca o sevkiyatın O ANKİ halini çekmek için
+// (bkz. lib/qrPayload.js buildRouteRef/parseRouteRef) - listedeki (muhtemelen
+// bayat) yerel kopyaya değil, doğrudan sunucuya soruyoruz.
+export async function fetchSevkiyat(id) {
+  const data = await request(`/api/sevkiyatlar/${encodeURIComponent(id)}`);
+  return data.sevkiyat;
+}
+
 export function createSevkiyat(sevkiyat) {
   return request("/api/sevkiyatlar", withJsonBody("POST", sevkiyat));
 }
@@ -195,6 +203,12 @@ export function setModulAyari(modulId, aktif) {
 export async function fetchDepoTransferleri() {
   const data = await request("/api/depo-transferleri");
   return data.transferler;
+}
+
+// fetchSevkiyat ile aynı amaç - İç Lojistik transferi için canlı okuma.
+export async function fetchDepoTransfer(id) {
+  const data = await request(`/api/depo-transferleri/${encodeURIComponent(id)}`);
+  return data.transfer;
 }
 
 export function createDepoTransfer(transfer) {

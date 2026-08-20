@@ -35,3 +35,22 @@ export function parseRoutePayload(text) {
   }
   return Object.keys(result).length > 0 ? result : null;
 }
+
+// "Canlı" güzergah QR'ı - buildRoutePayload gibi metni gömmek yerine sadece
+// kaydın kimliğine (tur + id) işaret eder. Etiket bir kez basılır, sonra
+// Lojistik/İç Lojistik'te kayıt güncellendikçe (nereye/durum değişince)
+// AYNI QR okutulduğunda güncel bilgi görünür - çünkü okuma anında sunucudan
+// o kaydın o anki hali çekiliyor (bkz. LojistikDashboard/IcLojistikDashboard
+// handleQrDetect, lib/api.js fetchSevkiyat/fetchDepoTransfer).
+export function buildRouteRef(tur, id) {
+  return `ERPREF:${tur}:${id}`;
+}
+
+const ROUTE_REF_PATTERN = /^ERPREF:(sevk|transfer):(.+)$/;
+
+export function parseRouteRef(text) {
+  if (!text) return null;
+  const m = String(text).trim().match(ROUTE_REF_PATTERN);
+  if (!m) return null;
+  return { tur: m[1], id: m[2] };
+}

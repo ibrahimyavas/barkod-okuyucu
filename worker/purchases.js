@@ -24,6 +24,7 @@ function purchaseRow(row) {
     birim: row.birim,
     birimFiyat: row.birim_fiyat,
     toplamTutar: row.toplam_tutar,
+    vergiOrani: row.vergi_orani,
     odemeDurumu: row.odeme_durumu,
     tarih: row.tarih,
     notMetni: row.not_metni,
@@ -138,13 +139,18 @@ async function createPurchase(request, env) {
   }
 
   const odemeDurumu = PAYMENT_STATUSES.has(body.odemeDurumu) ? body.odemeDurumu : "beklemede";
+  const vergiOraniRaw = body.vergiOrani;
+  const vergiOrani = vergiOraniRaw === "" || vergiOraniRaw == null ? null : Number(vergiOraniRaw);
+  if (vergiOrani != null && !Number.isFinite(vergiOrani)) {
+    return json({ error: "Vergi oranı geçerli bir sayı olmalı." }, { status: 400 });
+  }
 
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.prepare(
     `INSERT INTO purchases
-       (id, supplier_id, tedarikci_adi, urun_adi, barkod, miktar, birim, birim_fiyat, toplam_tutar, odeme_durumu, tarih, not_metni, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`
+       (id, supplier_id, tedarikci_adi, urun_adi, barkod, miktar, birim, birim_fiyat, toplam_tutar, vergi_orani, odeme_durumu, tarih, not_metni, created_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`
   )
     .bind(
       id,
@@ -156,12 +162,33 @@ async function createPurchase(request, env) {
       String(body.birim ?? "").trim() || null,
       birimFiyat,
       toplamTutar,
+      vergiOrani,
       odemeDurumu,
       String(body.tarih ?? "").trim() || null,
       String(body.notMetni ?? "").trim() || null,
       now
     )
     .run();
+
+  // Fatura'daki postToCari ile aynı desen: opsiyonel, bir cari seçilmişse
+  // tutarı ALACAK olarak işler (biz tedarikçiye borçlanırız - Cari Hesap'ın
+  // "bakiye = Σborç-Σalacak" kuralında bu doğru yön). Yalnızca oluşturma
+  // anında - bir düzenlemede tekrar gönderilmez (frontend zaten göndermiyor).
+  if (body.postToCari && body.cariId && toplamTutar > 0) {
+    await env.DB.prepare(
+      `INSERT INTO cari_hareketler (id, cari_id, tur, tutar, aciklama, tarih, created_at)
+       VALUES (?1, ?2, 'alacak', ?3, ?4, ?5, ?6)`
+    )
+      .bind(
+        crypto.randomUUID(),
+        body.cariId,
+        toplamTutar,
+        `Satın alma: ${urunAdi}`,
+        String(body.tarih ?? "").trim() || null,
+        now
+      )
+      .run();
+  }
 
   return json({ id, createdAt: now, toplamTutar }, { status: 201 });
 }
@@ -234,6 +261,14 @@ async function updatePurchase(request, env, id) {
   } else if (miktar !== undefined && birimFiyat !== undefined && miktar != null && birimFiyat != null) {
     sets.push(`toplam_tutar = ?${idx++}`);
     values.push(Math.round(miktar * birimFiyat * 100) / 100);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "vergiOrani")) {
+    const raw = body.vergiOrani;
+    const n = raw === "" || raw == null ? null : Number(raw);
+    if (n != null && !Number.isFinite(n)) return json({ error: "Vergi oranı geçerli bir sayı olmalı." }, { status: 400 });
+    sets.push(`vergi_orani = ?${idx++}`);
+    values.push(n);
   }
 
   if (sets.length === 0) {

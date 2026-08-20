@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Wallet, Clock, Users, Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { usePurchases } from "../hooks/usePurchases.js";
+import { useCariAccounts } from "../hooks/useCariAccounts.js";
 import { todayISO, trDate, fmtCurrency, groupByDate } from "../lib/format.js";
 import { findCatalogEntry } from "../lib/catalog.js";
 import DatePicker from "./DatePicker.jsx";
@@ -16,6 +17,9 @@ const EMPTY_PURCHASE = {
   odemeDurumu: "beklemede",
   tarih: todayISO(),
   notMetni: "",
+  vergiOrani: "",
+  cariId: "",
+  postToCari: false,
 };
 
 const STATUS_LABEL = { beklemede: "Beklemede", kismi: "Kısmi", odendi: "Ödendi" };
@@ -33,6 +37,7 @@ function purchaseToFormShape(p) {
     odemeDurumu: p.odemeDurumu || "beklemede",
     tarih: p.tarih || todayISO(),
     notMetni: p.notMetni || "",
+    vergiOrani: p.vergiOrani ?? "",
     toplamTutarTouched: true, // don't fight the user's/loaded values with auto-calc on first edit
   };
 }
@@ -43,6 +48,7 @@ function purchaseToFormShape(p) {
 // Lojistik'e) otomatik yansıyor.
 export default function PurchasingDashboard({ catalog = [], suppliers = [] }) {
   const { purchases, loading, error, addPurchase, cycleStatus, editPurchase, removePurchase } = usePurchases();
+  const { accounts } = useCariAccounts();
 
   const [form, setForm] = useState(EMPTY_PURCHASE);
   const [editingId, setEditingId] = useState(null);
@@ -134,6 +140,10 @@ export default function PurchasingDashboard({ catalog = [], suppliers = [] }) {
       odemeDurumu: form.odemeDurumu,
       tarih: form.tarih,
       notMetni: form.notMetni.trim(),
+      vergiOrani: form.vergiOrani === "" ? null : Number(form.vergiOrani),
+      // Yalnızca yeni kayıt eklerken gönderiliyor - bir düzenlemede tekrar
+      // gönderilirse aynı tutar ikinci kez cariye işlenmiş olurdu.
+      ...(editingId ? {} : { cariId: form.cariId || null, postToCari: form.postToCari }),
     };
     try {
       if (editingId) {
@@ -274,6 +284,21 @@ export default function PurchasingDashboard({ catalog = [], suppliers = [] }) {
         </div>
 
         <div className="field">
+          <label htmlFor="pu-vergi">Vergi Oranı (%, opsiyonel)</label>
+          <input
+            id="pu-vergi"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            placeholder="örn. 20 (KDV)"
+            value={form.vergiOrani}
+            onChange={(e) => updateField("vergiOrani", e.target.value)}
+          />
+          <p className="field-hint">Toplam tutarın vergi dahil olduğu varsayılır - Muhasebe'de ödenen KDV buradan ayrıştırılır.</p>
+        </div>
+
+        <div className="field">
           <label htmlFor="pu-durum">Ödeme Durumu</label>
           <select id="pu-durum" value={form.odemeDurumu} onChange={(e) => updateField("odemeDurumu", e.target.value)}>
             <option value="beklemede">Beklemede</option>
@@ -291,6 +316,33 @@ export default function PurchasingDashboard({ catalog = [], suppliers = [] }) {
           <label htmlFor="pu-not">Not</label>
           <input id="pu-not" type="text" value={form.notMetni} onChange={(e) => updateField("notMetni", e.target.value)} />
         </div>
+
+        {!editingId && (
+          <>
+            <div className="field">
+              <label htmlFor="pu-cari">Cari Hesap'tan seç (opsiyonel)</label>
+              <select id="pu-cari" value={form.cariId} onChange={(e) => updateField("cariId", e.target.value)}>
+                <option value="">— Seçilmedi —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.ad}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {form.cariId && (
+              <label className="checkbox-inline field-wide">
+                <input
+                  type="checkbox"
+                  checked={form.postToCari}
+                  onChange={(e) => updateField("postToCari", e.target.checked)}
+                />
+                Tutarı bu cari hesaba alacak olarak işle (biz bu tedarikçiye borçlanırız)
+              </label>
+            )}
+          </>
+        )}
 
         {submitError && <p className="form-error">{submitError}</p>}
 

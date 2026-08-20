@@ -45,3 +45,22 @@ export function resolveSalePrice(barkod, { fiyatlar, products }) {
     birim: urun?.birim || "",
   };
 }
+
+// Satış Fiyatları'nda tanımlı (dolayısıyla POS'ta satılabilir) tüm
+// ürünlerin {barkod, urunAdi} listesi - Satış ekranında barkod yerine isme
+// göre elle ekleme (datalist) için.
+export function sellableProducts(fiyatlar, products) {
+  return fiyatlar
+    .map((f) => ({ barkod: f.barkod, urunAdi: findLatestProductByBarcode(products, f.barkod)?.urunAdi || f.barkod }))
+    .sort((a, b) => a.urunAdi.localeCompare(b.urunAdi, "tr"));
+}
+
+// Ürün ADINA göre (tam, büyük/küçük harf duyarsız eşleşme) satılabilir
+// barkodu bulur - kullanıcı datalist'ten bir isim seçtiğinde/yazdığında
+// bunun hangi barkoda karşılık geldiğini çözmek için.
+export function findBarcodeByName(name, { fiyatlar, products }) {
+  const q = (name || "").trim().toLowerCase();
+  if (!q) return null;
+  const match = sellableProducts(fiyatlar, products).find((p) => p.urunAdi.toLowerCase() === q);
+  return match?.barkod || null;
+}

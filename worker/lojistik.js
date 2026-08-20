@@ -73,6 +73,16 @@ async function createSevkiyat(request, env) {
   return json({ id, createdAt: now }, { status: 201 });
 }
 
+// Tek bir sevkiyatın GÜNCEL halini döner - Lojistik'in QR "canlı bilgi
+// kartı" modu için (bkz. src/lib/qrPayload.js buildRouteRef/parseRouteRef):
+// basılan etiket sadece bu ID'yi taşıyor, her okutmada buraya sorulup en
+// güncel durum/güzergah gösteriliyor.
+async function getSevkiyat(env, id) {
+  const row = await env.DB.prepare("SELECT * FROM sevkiyatlar WHERE id = ?1").bind(id).first();
+  if (!row) return json({ error: "Sevkiyat bulunamadı." }, { status: 404 });
+  return json({ sevkiyat: sevkiyatRow(row) });
+}
+
 async function updateSevkiyat(request, env, id) {
   let body;
   try {
@@ -145,6 +155,9 @@ export async function handleLojistikRoute(request, env, pathname) {
   }
 
   const match = pathname.match(/^\/api\/sevkiyatlar\/([^/]+)$/);
+  if (match && request.method === "GET") {
+    return getSevkiyat(env, match[1]);
+  }
   if (match && request.method === "PATCH") {
     return updateSevkiyat(request, env, match[1]);
   }

@@ -1,13 +1,15 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, PackageCheck, Plus, Pencil, Trash2, X, Search, ScanBarcode, QrCode } from "lucide-react";
+import { ArrowRightLeft, PackageCheck, Plus, Pencil, Trash2, X, Search, ScanBarcode, QrCode, Check } from "lucide-react";
 import { useDepoTransferleri } from "../hooks/useDepoTransferleri.js";
 import { useCameraScanner } from "../hooks/useCameraScanner.js";
 import { QR_ONLY_FORMATS, resolveQrOnlyDetector } from "../lib/barcodeDetector.js";
-import { parseRoutePayload } from "../lib/qrPayload.js";
+import { parseRoutePayload, parseRouteRef } from "../lib/qrPayload.js";
+import { fetchDepoTransfer } from "../lib/api.js";
 import { todayISO, trDate, groupByDate } from "../lib/format.js";
 import { findCatalogEntry } from "../lib/catalog.js";
 import DatePicker from "./DatePicker.jsx";
 import CameraPanel from "./CameraPanel.jsx";
+import Modal from "./Modal.jsx";
 
 // Etiket Bas'ta bastığımız güzergah QR'ları (bkz. lib/qrPayload.js) burada
 // tekrar okunuyor - Lojistik'teki QR modu ile aynı altyapı/kırpma bölgesi.
@@ -58,14 +60,65 @@ export default function IcLojistikDashboard({ catalog = [] }) {
   const [query, setQuery] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [lastHit, setLastHit] = useState(null);
+  // "Canlı" (ID referanslı) bir QR okutulunca açılan bilgi kartı - bkz.
+  // lib/qrPayload.js buildRouteRef/parseRouteRef. liveRecord her okutmada
+  // sunucudan TAZE çekiliyor, yerel transferler listesine güvenmiyoruz.
+  const [liveRef, setLiveRef] = useState(null);
+  const [liveRecord, setLiveRecord] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState(null);
+  const [liveHedef, setLiveHedef] = useState("");
+
+  function closeLiveCard() {
+    setLiveRef(null);
+    setLiveRecord(null);
+    setLiveError(null);
+  }
+
+  async function handleLiveDurumChange(durum) {
+    if (!liveRecord) return;
+    await updateOne(liveRecord.id, { durum });
+    setLiveRecord((r) => (r ? { ...r, durum } : r));
+  }
+
+  async function handleLiveHedefSave() {
+    if (!liveRecord) return;
+    await updateOne(liveRecord.id, { hedefKonum: liveHedef });
+    setLiveRecord((r) => (r ? { ...r, hedefKonum: liveHedef } : r));
+  }
 
   // Etiket Bas'ta bastığımız güzergah QR'ını okutunca formu tek seferde
-  // doldurur: barkod/ürün adı + nereden/nereye -> kaynak/hedef konum.
-  // Bizim formatımıza uymayan bir kod okunursa (parseRoutePayload null
-  // döner) ham değeri düz barkod gibi ele alıyoruz - aşağıdaki katalog
+  // doldurur: barkod/ürün adı + nereden/nereye -> kaynak/hedef konum. Bir
+  // "canlı referans" QR'ıysa (buildRouteRef ile basılmış, bkz.
+  // LabelPrintDashboard) formu doldurmak yerine o transferin GÜNCEL halini
+  // sunucudan çekip bir bilgi kartı açıyoruz. Bizim formatımıza uymayan bir
+  // kod okunursa ham değeri düz barkod gibi ele alıyoruz - aşağıdaki katalog
   // eşleşmesi zaten ürün adını doldurur. Kamera açık kalıyor (otomatik
   // kapanmıyor) - kullanıcı "Kapat"a basana kadar art arda tarayabilir.
   const handleQrDetect = useCallback((code) => {
+    setLastHit({ code, ts: Date.now() });
+
+    const ref = parseRouteRef(code);
+    if (ref) {
+      setLiveRef(ref);
+      setLiveRecord(null);
+      if (ref.tur !== "transfer") {
+        setLiveError("Bu QR bir Lojistik sevkiyatına ait - Lojistik ekranından okutun.");
+        setLiveLoading(false);
+        return;
+      }
+      setLiveError(null);
+      setLiveLoading(true);
+      fetchDepoTransfer(ref.id)
+        .then((t) => {
+          setLiveRecord(t);
+          setLiveHedef(t.hedefKonum || "");
+        })
+        .catch((err) => setLiveError(err.message))
+        .finally(() => setLiveLoading(false));
+      return;
+    }
+
     const parsed = parseRoutePayload(code);
     setForm((f) => ({
       ...f,
@@ -74,7 +127,6 @@ export default function IcLojistikDashboard({ catalog = [] }) {
       kaynakKonum: parsed?.nereden || f.kaynakKonum,
       hedefKonum: parsed?.nereye || f.hedefKonum,
     }));
-    setLastHit({ code, ts: Date.now() });
   }, []);
 
   const camera = useCameraScanner({
@@ -401,6 +453,73 @@ export default function IcLojistikDashboard({ catalog = [] }) {
           </div>
         )}
       </div>
+
+      {liveRef && (
+        <Modal title="Transfer - Canlı Bilgi" onClose={closeLiveCard}>
+          {liveLoading ? (
+            <p className="empty-state">Yükleniyor…</p>
+          ) : liveError ? (
+            <p className="form-error">{liveError}</p>
+          ) : liveRecord ? (
+            <>
+              <dl className="live-card-fields">
+                <div className="live-card-row">
+                  <dt>Ürün</dt>
+                  <dd>{liveRecord.urunAdi}</dd>
+                </div>
+                <div className="live-card-row">
+                  <dt>Miktar</dt>
+                  <dd>{liveRecord.miktar != null ? `${liveRecord.miktar} ${liveRecord.birim || ""}`.trim() : "-"}</dd>
+                </div>
+                <div className="live-card-row">
+                  <dt>Kaynak Konum</dt>
+                  <dd>{liveRecord.kaynakKonum || "-"}</dd>
+                </div>
+                <div className="live-card-row">
+                  <dt>Tarih</dt>
+                  <dd>{trDate(liveRecord.tarih) || "-"}</dd>
+                </div>
+              </dl>
+
+              <div className="field">
+                <label htmlFor="il-live-durum">Durum</label>
+                <select
+                  id="il-live-durum"
+                  className={`status-badge ${DURUM_BADGE_CLASS[liveRecord.durum]}`}
+                  value={liveRecord.durum}
+                  onChange={(e) => handleLiveDurumChange(e.target.value)}
+                >
+                  {DURUM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="il-live-hedef">Hedef Konum</label>
+                <div className="live-card-location-edit">
+                  <input
+                    id="il-live-hedef"
+                    type="text"
+                    value={liveHedef}
+                    onChange={(e) => setLiveHedef(e.target.value)}
+                  />
+                  <button type="button" className="icon-btn" onClick={handleLiveHedefSave} title="Kaydet">
+                    <Check size={15} />
+                  </button>
+                </div>
+              </div>
+
+              <p className="dashboard-hint">
+                Bu bilgi canlıdır - kaydı güncelledikçe (burada ya da tablodan) aynı etiketi tekrar okutunca güncel
+                hali görünür.
+              </p>
+            </>
+          ) : null}
+        </Modal>
+      )}
     </div>
   );
 }
